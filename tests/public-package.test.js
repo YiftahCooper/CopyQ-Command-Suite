@@ -134,7 +134,7 @@ test("PUBLIC-FILES and the non-ignored workspace close to the same exact set", (
   assert.equal(pathspecLines.includes(""), false, "PUBLIC-FILES.txt contains an empty Git pathspec");
   const allowlist = pathspecLines;
   assert.deepEqual(allowlist, manifest.publicFiles);
-  const git = spawnSync("C:\\Program Files\\Git\\cmd\\git.exe", ["ls-files", "--others", "--exclude-standard"], {
+  const git = spawnSync("C:\\Program Files\\Git\\cmd\\git.exe", ["ls-files", "--cached", "--others", "--exclude-standard"], {
     cwd: root,
     encoding: "utf8",
   });
