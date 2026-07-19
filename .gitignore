@@ -1,0 +1,69 @@
+# Private and generated release state
+_local/
+.build/
+.agents/
+.codex/
+artifacts/
+backups/
+downloads/
+receipts/
+partials/
+private-items/
+private-settings/
+Found Online/
+legacy/
+vendor/
+dist/
+.superpowers/
+.worktrees/
+node_modules/
+coverage/
+testResults.xml
+copyq_commands_backup*.json
+*.cpq
+commands.native.txt
+config-files.json
+*.local.json
+*.log
+
+# Retained private workspace history
+Activate-CopyQ-Upgrade.cmd
+Invoke-CopyQUpgrade.ps1
+Restore-CopyQ.ps1
+Who you are.md
+apply.js
+check_cmds.js
+Code.ini
+Content Rendering.ini
+Frequent.ini
+Ignore Passwords, Tokens, Keys.ini
+Text Transformations.ini
+test_auto_route.ps1
+test_copyq.bat
+verify.bat
+verify.js
+docs/MANUAL-UPGRADE.md
+docs/OPERATIONS.md
+docs/superpowers/
+manifest/commands.json
+manifest/release-package.json
+manifest/release-receipt.schema.json
+modules/CopyQ.Release.psm1
+scripts/Accept-CopyQCandidate.js
+scripts/Activate-CopyQInMemory.js
+scripts/Audit-CopyQHistory.js
+scripts/Build-CopyQFollowupRepairs.ps1
+scripts/Build-CopyQManagedIni.ps1
+scripts/Build-CopyQUtilityRepairs.ps1
+scripts/CopyQMergeCore.js
+src/generate.js
+tests/accepted-contract.test.js
+tests/fakes/
+tests/history-audit.test.js
+tests/manual-upgrade-package.test.js
+tests/release-transaction.Tests.ps1
+
+# Editor and platform noise
+.DS_Store
+Thumbs.db
+desktop.ini
