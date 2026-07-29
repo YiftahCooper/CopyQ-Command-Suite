@@ -14,14 +14,14 @@ function internalIds(ini) {
   return [...ini.matchAll(/^(?:\d+\\)?InternalId=(.+)\r?$/gm)].map((match) => match[1]);
 }
 
-test("public manifest closes the complete 36-command inventory", () => {
+test("public manifest closes the complete 38-command inventory", () => {
   assert.equal(manifest.schema, 1);
   assert.equal(manifest.license, "GPL-3.0-only");
-  assert.equal(manifest.commands.length, 16);
+  assert.equal(manifest.commands.length, 18);
   assert.equal(manifest.referenceOnly.length, 11);
   assert.equal(manifest.copyqDefaults.length, 9);
-  assert.equal(manifest.commands.length + manifest.referenceOnly.length + manifest.copyqDefaults.length, 36);
-  assert.equal(manifest.commands.filter((entry) => entry.group === "canonical").length, 13);
+  assert.equal(manifest.commands.length + manifest.referenceOnly.length + manifest.copyqDefaults.length, 38);
+  assert.equal(manifest.commands.filter((entry) => entry.group === "canonical").length, 15);
   assert.equal(manifest.commands.filter((entry) => entry.group === "moonlander").length, 3);
 });
 
@@ -38,6 +38,7 @@ test("public identities, names, outputs, and shortcuts are unique", () => {
     f19: "moonlander.cycle-case",
     f22: "moonlander.hebrew-layout",
   });
+  assert.equal(shortcuts.find((entry) => entry.shortcut.toLowerCase() === "ctrl+z").identity, "canonical.undo-delete");
 });
 
 test("Moonlander commands declare the public companion repository", () => {
@@ -82,7 +83,7 @@ test("all declared public files and bundles exist", () => {
   for (const relative of manifest.publicFiles) {
     assert.equal(fs.existsSync(absolute(relative)), true, `missing public file: ${relative}`);
   }
-  assert.deepEqual(manifest.bundles.map((entry) => entry.count), [13, 3, 16]);
+  assert.deepEqual(manifest.bundles.map((entry) => entry.count), [15, 3, 18]);
 });
 
 test("individual exports and bundles contain the exact manifest identities", () => {

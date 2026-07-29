@@ -77,20 +77,20 @@ Describe 'CopyQ bilingual OCR dependency' {
 
     It 'recognizes English from PNG bytes on standard input' {
         $result = Invoke-TesseractStdin -Path $script:EnglishFixture
-        $result.ExitCode | Should -Be 0
-        $result.StdOut | Should -Match 'HELLO'
+        $result.ExitCode | Should Be 0
+        $result.StdOut | Should Match 'HELLO'
     }
 
     It 'recognizes Hebrew from PNG bytes on standard input' {
         $result = Invoke-TesseractStdin -Path $script:HebrewFixture
-        $result.ExitCode | Should -Be 0
-        $result.StdOut | Should -Match '[א-ת]'
+        $result.ExitCode | Should Be 0
+        $result.StdOut | Should Match '[א-ת]'
     }
 
     It 'recognizes both scripts without asking for a language' {
         $result = Invoke-TesseractStdin -Path $script:MixedFixture
-        $result.ExitCode | Should -Be 0
-        $result.StdOut | Should -Match 'HELLO'
-        $result.StdOut | Should -Match '[א-ת]'
+        $result.ExitCode | Should Be 0
+        $result.StdOut | Should Match 'HELLO'
+        $result.StdOut | Should Match '[א-ת]'
     }
 }

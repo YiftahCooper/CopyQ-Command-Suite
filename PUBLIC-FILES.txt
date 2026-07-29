@@ -30,9 +30,12 @@ tests/moonlander-commands.test.js
 tests/translation-helper.Tests.ps1
 tests/dependencies.Tests.ps1
 tests/ocr-integration.Tests.ps1
+tests/copyq-runtime.Tests.ps1
 docs/commands/COMMANDS.md
 docs/CREDITS.md
 commands/individual/canonical-dispatcher.ini
+commands/individual/move-to-trash-undoable.ini
+commands/individual/undo-delete.ini
 commands/individual/remove-background-and-text-colors.ini
 commands/individual/translate-to-english.ini
 commands/individual/render-markdown.ini

@@ -4,12 +4,15 @@ const runtime = require("./runtime");
 
 function command(internalId, name, cmd, options) {
   const settings = options || {};
-  return { internalId, name, cmd, automatic: !!settings.automatic, isScript: false, inMenu: settings.inMenu !== false, input: settings.input || "text/plain", display: settings.display === true, isGlobalShortcut: (settings.globalShortcuts || []).length > 0, globalShortcuts: settings.globalShortcuts || [] };
+  const globalShortcuts = settings.globalShortcuts || [];
+  return { internalId, name, cmd, automatic: !!settings.automatic, isScript: settings.isScript === true, inMenu: settings.inMenu !== false, input: settings.input || "text/plain", display: settings.display === true, isGlobalShortcut: globalShortcuts.length > 0, globalShortcuts, shortcuts: settings.shortcuts || [] };
 }
 
 function buildCandidate() {
   return { schema: 2, commands: [
     command("canonical.dispatcher", "Canonical Dispatcher", runtime.dispatcherBody(), { automatic: true, inMenu: false, display: false }),
+    command("canonical.undoable-delete-listener", "Move to Trash (Undoable)", runtime.undoableDeleteListenerBody(), { isScript: true, inMenu: false }),
+    command("canonical.undo-delete", "Undo Delete", runtime.undoDeleteBody(), { shortcuts: ["ctrl+z"] }),
     command("canonical.html-sanitizer", "Remove Background and Text Colors", runtime.htmlSanitizerBody(), { automatic: true, input: "text/html" }),
     command("canonical.translate-en", "Translate to English", runtime.translateBody()),
     command("canonical.markdown-render", "Render Markdown", runtime.markdownBody(), { automatic: true }),

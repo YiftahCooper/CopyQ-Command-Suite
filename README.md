@@ -2,15 +2,15 @@
 
 A curated Windows command collection for [CopyQ](https://github.com/hluk/CopyQ) 16. It combines privacy-aware clipboard routing, automatic Markdown rendering, OCR, code highlighting, translation, text utilities, and optional Moonlander selected-text commands.
 
-The repository distributes sixteen original or independently rewritten commands. Community commands used in the author's personal setup are credited and linked, but their source is not republished here.
+The repository distributes eighteen original or independently rewritten commands. Community commands used in the author's personal setup are credited and linked, but their source is not republished here.
 
 ## Quick start
 
 1. Install CopyQ 16.
 2. Download an individual command from the [command catalogue](docs/commands/COMMANDS.md), or choose a bundle:
-   - [`commands/bundles/canonical.ini`](commands/bundles/canonical.ini) — thirteen general-purpose commands.
+   - [`commands/bundles/canonical.ini`](commands/bundles/canonical.ini) — fifteen general-purpose commands.
    - [`commands/bundles/moonlander.ini`](commands/bundles/moonlander.ini) — three Moonlander integrations.
-   - [`commands/bundles/all.ini`](commands/bundles/all.ini) — all sixteen commands.
+   - [`commands/bundles/all.ini`](commands/bundles/all.ini) — all eighteen commands.
 3. Open CopyQ, press `F6`, choose **Load Commands**, select the INI, review the command list, and confirm.
 4. Run the optional dependency report when using rendering, highlighting, OCR, translation, or Moonlander features:
 
@@ -24,7 +24,7 @@ Importing a command file does not install external programs and does not change 
 
 | Area | Commands |
 |---|---|
-| Clipboard automation | Canonical Dispatcher; Remove Background and Text Colors |
+| Clipboard automation | Canonical Dispatcher; Move to Trash (Undoable); Undo Delete; Remove Background and Text Colors |
 | Rendering and extraction | Render Markdown; Highlight Code; Copy Text in Image |
 | Translation | Translate to English |
 | Data and search | Copy Items as JSON; Paste Items from JSON; Search All Tabs; Copy and Search on Web |
@@ -71,7 +71,10 @@ If those keys are already assigned to other CopyQ commands, resolve the collisio
 ## Privacy and failure behaviour
 
 - Canonical Dispatcher keeps high-confidence secrets out of CopyQ history and shows the content-free reason `SECRET_IGNORED`.
-- Frequency state stores bounded dual hashes and counts, not copied text.
+- Substantial JSON, command blocks, transcripts, logs, stack traces, diffs, and configuration blocks route to `Artifacts`; short commands, standalone paths, `git status`, and ordinary prose stay in the normal history.
+- Eligible text from normal history, `&URLs`, `BIG`, `Artifacts`, and `Code` is counted independently of its primary tab. On copy six, a trimmed text-only copy is added to `Frequent`; the primary item remains where it belongs.
+- Frequency state stores at most 4,096 dual-hash counters and recency values, not copied text. Leading and trailing whitespace do not create separate counters.
+- Deletion moves complete items into `(trash)` for up to 30 days and `Ctrl+Z` in the CopyQ window restores the newest removal batch. Delete sensitive material from `(trash)` as well when immediate permanent removal is required.
 - Markdown, highlighting, and OCR run locally.
 - Azure receives only text explicitly sent through Translate to English.
 - Missing tools leave the current clipboard item intact and report bounded codes such as `MARKDOWN_FAILED`, `PYGMENTS_FAILED`, `OCR_FAILED`, or `TRANSLATE_NOT_CONFIGURED`.
@@ -84,14 +87,16 @@ The committed INI files are generated from the canonical JavaScript command mode
 ```powershell
 npm test
 npm run build
-Invoke-Pester .\tests\*.Tests.ps1 -Output Detailed
+Invoke-Pester .\tests -Verbose
 ```
 
-The build creates sixteen individual files and the three bundles, imports every result back into the isolated session, and never connects to or modifies the normal CopyQ session.
+The PowerShell tests use syntax compatible with the Pester 3.4 module bundled on this Windows machine. The build creates eighteen individual files and the three bundles, imports every result back into the isolated session, and never connects to or modifies the normal CopyQ session.
 
 ## Community commands
 
 Several excellent commands used alongside this collection come from [`hluk/copyq-commands`](https://github.com/hluk/copyq-commands). They are not distributed here. See [credits and recommended community commands](docs/CREDITS.md) for direct source links and contributor attribution.
+
+In particular, **Move to Trash (Undoable)** and **Undo Delete** are independent implementations inspired by `hluk`'s maintained [Undoable Move to Trash](https://github.com/hluk/copyq-commands/blob/master/commands/undoable-move-to-trash.ini). This suite adds private batch metadata, lazy 30-day cleanup, complete-item restoration, and integration with the Frequent counter; it does not republish the upstream command body.
 
 ## License
 

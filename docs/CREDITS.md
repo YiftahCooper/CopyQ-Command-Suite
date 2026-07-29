@@ -9,6 +9,7 @@ The repository contains only original commands and independent, substantial rewr
 ## Independently rewritten command families
 
 - Canonical Dispatcher was inspired by [Big Data Tab](https://github.com/hluk/copyq-commands/blob/master/commands/big-data-tab.ini), [Ignore Passwords and Tokens](https://github.com/hluk/copyq-commands/blob/master/commands/ignore-passwords-tokens.ini), and [Frequent Items Tab](https://github.com/hluk/copyq-commands/blob/master/commands/frequent-items-tab.ini) by `hluk`.
+- Move to Trash (Undoable) and Undo Delete were inspired by the maintained [Undoable Move to Trash](https://github.com/hluk/copyq-commands/blob/master/commands/undoable-move-to-trash.ini) pair by `hluk`. This suite uses an independently structured implementation with private batch metadata, 30-day lazy cleanup, and Frequent-counter dismissal/restoration.
 - Remove Background and Text Colors was inspired by [the upstream command](https://github.com/hluk/copyq-commands/blob/master/commands/remove-background-and-text-colors.ini) by `hluk`.
 - Copy Items as JSON and Paste Items from JSON were inspired by [Copy/Paste Items as JSON](https://github.com/hluk/copyq-commands/blob/master/commands/copy-paste-items-as-json.ini), associated with `beefeater7` and `hluk`.
 - Search All Tabs was inspired by [Search All Tabs](https://github.com/hluk/copyq-commands/blob/master/commands/search-all-tabs.ini), associated with `alexjulien`, `GFDGIT`, and `hluk`.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 - 2026-07-29
+
+- Added strong technical-artifact routing to a lazy `Artifacts` tab.
+- Rebuilt `Frequent` as a whitespace-normalized secondary index across all eligible text destinations, ordered by most recent qualifying copy.
+- Added undoable deletion through `(trash)` and local `Ctrl+Z`, including Frequent-counter dismissal and restoration.
+- Expanded the public distribution to fifteen canonical and three Moonlander commands.
+
 ## 1.0.0 - 2026-07-19
 
 Initial public release.

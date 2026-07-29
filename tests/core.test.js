@@ -7,7 +7,8 @@ const test = require("node:test");
 
 const { isHighConfidenceSecret } = require("../src/secrets");
 const { isCode, routeContent } = require("../src/routing");
-const { FrequencyStore, hashesFor, legacyKiloHash } = require("../src/frequency");
+const { FrequencyStore, hashesFor, v2HashesFor, legacyKiloHash } = require("../src/frequency");
+const core = require("../src/core-node");
 const { commandIdentity, mergeCommands } = require("../src/merge");
 const { findDuplicates } = require("../src/inventory");
 const { buildCandidate, stableStringify } = require("../src/commands");
@@ -51,35 +52,147 @@ test("routes code without classifying prose as code", () => {
   assert.equal(routeContent({ text: "function demo() { return 1; }" }).action, "code");
 });
 
-test("passes image and URL data through existing handlers before automatic routing", () => {
-  assert.equal(routeContent({ text: "function demo() {}", formats: ["image/png"] }).action, "passthrough");
-  assert.equal(routeContent({ text: "https://example.test/thing" }).action, "passthrough");
+test("classifies strong technical artifacts without diverting short technical text", () => {
+  const receipt = JSON.stringify({ repository: "D:\\work\\repo", result: "published", branch: "main" });
+  const powershell = "& 'D:\\tools\\publish.ps1' `\n  -Repo 'D:\\work\\repo' `\n  -Branch 'main'";
+  const recoveryLog = "[21:17:14] RecoveryCapture started\nRELEASE_STAGE_FAILED: stage=RecoveryCapture\n--- backtrace ---\nentry@eval code:19";
+  const transcript = "PS D:\\work> git status\nOn branch main\nnothing to commit";
+  const logs = "2026-07-29T10:00:00Z INFO starting\n2026-07-29T10:00:01Z ERROR stopped";
+  const stack = "Traceback (most recent call last):\n  File \"tool.py\", line 4, in <module>\nValueError: invalid";
+  const diff = "diff --git a/a.js b/a.js\n@@ -1,1 +1,1 @@\n-old\n+new";
+  const config = "host=localhost\nport=8080\nmode: safe";
+  assert.equal(typeof core.isArtifact, "function");
+  assert.equal(core.isArtifact(receipt), true);
+  assert.equal(core.isArtifact(powershell), true);
+  assert.equal(core.isArtifact(recoveryLog), true);
+  assert.equal(core.isArtifact('["one","two"]'), true);
+  assert.equal(core.isArtifact(transcript), true);
+  assert.equal(core.isArtifact(logs), true);
+  assert.equal(core.isArtifact(stack), true);
+  assert.equal(core.isArtifact(diff), true);
+  assert.equal(core.isArtifact(config), true);
+  assert.equal(core.isArtifact('["one"]'), false);
+  assert.equal(core.isArtifact("git status"), false);
+  assert.equal(core.isArtifact("D:\\work\\repo"), false);
+  assert.equal(core.isArtifact("Get-Process copyq"), false);
+  assert.equal(core.isArtifact("A normal paragraph\nthat continues on another line."), false);
 });
 
-test("frequency keys preserve exact whitespace and promotes the sixth exact copy", () => {
+test("routing keeps primary placement separate from frequency eligibility", () => {
+  assert.deepEqual(
+    { ...routeContent({ text: "function demo() {}", formats: ["image/png"] }) },
+    { action: "passthrough", frequencyEligible: false },
+  );
+  assert.deepEqual(
+    { ...routeContent({ text: "https://example.test/thing" }) },
+    { action: "passthrough", frequencyEligible: true },
+  );
+  assert.deepEqual(
+    { ...routeContent({ text: "a".repeat(5000) }) },
+    { action: "big", frequencyEligible: true },
+  );
+  assert.deepEqual(
+    { ...routeContent({ text: JSON.stringify({ repository: "repo", result: "published" }) }) },
+    { action: "artifacts", frequencyEligible: true },
+  );
+  assert.deepEqual(
+    { ...routeContent({ text: "const answer = 42;" }) },
+    { action: "code", frequencyEligible: true },
+  );
+  assert.deepEqual(
+    { ...routeContent({ text: "ordinary clipboard text" }) },
+    { action: "default", frequencyEligible: true },
+  );
+  assert.deepEqual(
+    { ...routeContent({ text: "ghp_abcdefghijklmnopqrstuvwxyz1234567890" }) },
+    { action: "ignored", frequencyEligible: false },
+  );
+});
+
+test("frequency identity trims surrounding whitespace and promotes the sixth normalized copy", () => {
   let store = new FrequencyStore();
-  for (let i = 0; i < 5; i += 1) {
-    const result = store.record("same text");
+  const variants = ["dfosaij", "dfosaij ", " dfosaij", " dfosaij ", "dfosaij"];
+  for (const text of variants) {
+    const result = store.record(text);
     assert.notEqual(result.store, store);
     assert.equal(result.promote, false);
+    assert.equal(result.canonicalText, "dfosaij");
     store = result.store;
   }
-  let result = store.record("same text");
+  const result = store.record("  dfosaij  ");
   assert.equal(result.promote, true);
-  store = result.store;
-  result = store.record(" same text");
-  assert.equal(result.count, 1);
-  assert.notEqual(hashesFor("same text").key, hashesFor(" same text").key);
+  assert.equal(result.count, 6);
+  assert.equal(result.key, hashesFor("dfosaij").key);
+  assert.equal(Object.keys(result.store.snapshot().counters).length, 1);
 });
 
-test("lazily migrates a legacy count without retaining the copied text", () => {
-  const store = new FrequencyStore({ frequent_usage_counts: { [legacyKiloHash("old fixture text")]: 5 } });
+test("v3 lazily imports normalized v2 and legacy counts without modifying either source", () => {
+  const normalized = "old fixture text";
+  const v2Key = v2HashesFor(normalized).key;
+  const legacyKey = legacyKiloHash(normalized);
+  const store = new FrequencyStore({
+    v2: { version: 2, counters: { [v2Key]: { version: 2, first: "a", second: "b", count: 2, lastUsed: 1 } }, clock: 1 },
+    frequent_usage_counts: { [legacyKey]: 3 },
+  });
   const result = store.record("old fixture text");
   const snapshot = result.store.snapshot();
   assert.equal(result.count, 6);
   assert.equal(result.promote, true);
   assert.equal(JSON.stringify(snapshot).includes("old fixture text"), false);
   assert.equal(Object.keys(snapshot.counters).length, 1);
+  assert.equal(store.v2.counters[v2Key].count, 2);
+  assert.equal(store.legacy[legacyKey], 3);
+});
+
+test("dismissal resets only the active v3 count and undo adds post-dismissal copies", () => {
+  let store = new FrequencyStore();
+  for (let i = 0; i < 7; i += 1) store = store.record("repeat me").store;
+  const key = hashesFor("repeat me").key;
+  const dismissed = store.dismiss(key);
+  assert.equal(dismissed.savedCount, 7);
+  assert.equal(dismissed.store.snapshot().counters[key].count, 0);
+  let afterDelete = dismissed.store.record(" repeat me ");
+  assert.equal(afterDelete.count, 1);
+  const restored = afterDelete.store.restore(key, dismissed.savedCount);
+  assert.equal(restored.count, 8);
+  assert.equal(restored.store.snapshot().counters[key].count, 8);
+});
+
+test("dismissal leaves a zero-count v3 tombstone even when the active counter is missing", () => {
+  const key = hashesFor("legacy frequent item").key;
+  const dismissed = new FrequencyStore().dismiss(key);
+  assert.equal(dismissed.savedCount, 0);
+  assert.equal(dismissed.store.snapshot().counters[key].count, 0);
+  const next = dismissed.store.record("legacy frequent item");
+  assert.equal(next.count, 1);
+});
+
+test("a dismissed Frequent item requires six fresh copies unless its deletion is undone", () => {
+  let store = new FrequencyStore();
+  for (let i = 0; i < 8; i += 1) store = store.record("dismiss me").store;
+  const key = hashesFor("dismiss me").key;
+  const dismissed = store.dismiss(key);
+  store = dismissed.store;
+  for (let i = 1; i <= 5; i += 1) {
+    const copy = store.record(i % 2 ? " dismiss me" : "dismiss me ");
+    assert.equal(copy.count, i);
+    assert.equal(copy.promote, false);
+    store = copy.store;
+  }
+  const sixth = store.record("dismiss me");
+  assert.equal(sixth.count, 6);
+  assert.equal(sixth.promote, true);
+  const restored = sixth.store.restore(key, dismissed.savedCount);
+  assert.equal(restored.count, 14);
+  assert.equal(Object.keys(restored.store.snapshot().counters).length, 1);
+});
+
+test("trash expires at exactly thirty days", () => {
+  assert.equal(typeof core.isTrashExpired, "function");
+  const now = Date.parse("2026-07-29T12:00:00.000Z");
+  assert.equal(core.isTrashExpired("2026-06-29T12:00:00.001Z", now, 30 * 86400000), false);
+  assert.equal(core.isTrashExpired("2026-06-29T12:00:00.000Z", now, 30 * 86400000), true);
+  assert.equal(core.isTrashExpired("not-a-date", now, 30 * 86400000), false);
 });
 
 test("frequency state keeps dual hashes and prunes least recently used counters at 4096", () => {
@@ -88,6 +201,7 @@ test("frequency state keeps dual hashes and prunes least recently used counters 
   const snapshot = store.snapshot();
   assert.equal(Object.keys(snapshot.counters).length, 4096);
   assert.equal(snapshot.counters[hashesFor("entry-0").key], undefined);
+  assert.equal(snapshot.version, 3);
   assert.equal(typeof snapshot.counters[hashesFor("entry-4096").key].first, "string");
 });
 

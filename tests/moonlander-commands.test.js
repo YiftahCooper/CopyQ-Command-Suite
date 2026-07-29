@@ -26,13 +26,13 @@ test("Moonlander commands resolve their companion runtime from LOCALAPPDATA", ()
   }
 });
 
-test("public command model contains thirteen canonical and three Moonlander commands", () => {
+test("public command model contains fifteen canonical and three Moonlander commands", () => {
   const first = buildPublicCommands();
   const second = buildPublicCommands();
   assert.equal(first.schema, 2);
-  assert.equal(first.commands.length, 16);
+  assert.equal(first.commands.length, 18);
   assert.deepEqual(first, second);
-  assert.equal(new Set(first.commands.map((entry) => entry.internalId)).size, 16);
-  assert.equal(first.commands.filter((entry) => /^canonical\./.test(entry.internalId)).length, 13);
+  assert.equal(new Set(first.commands.map((entry) => entry.internalId)).size, 18);
+  assert.equal(first.commands.filter((entry) => /^canonical\./.test(entry.internalId)).length, 15);
   assert.equal(first.commands.filter((entry) => /^moonlander\./.test(entry.internalId)).length, 3);
 });

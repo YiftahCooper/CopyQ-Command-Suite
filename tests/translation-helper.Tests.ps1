@@ -1,9 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
-BeforeAll {
-    $script:RepoRoot = Split-Path -Parent $PSScriptRoot
-    $script:ModulePath = Join-Path $script:RepoRoot 'modules\CopyQ.Translation.psm1'
-}
+$script:RepoRoot = Split-Path -Parent $PSScriptRoot
+$script:ModulePath = Join-Path $script:RepoRoot 'modules\CopyQ.Translation.psm1'
 
 Describe 'CopyQ Azure translation credential and response boundary' {
     BeforeEach {
@@ -24,29 +22,29 @@ Describe 'CopyQ Azure translation credential and response boundary' {
     }
 
     It 'stores a current-user encrypted key without plaintext' {
-        Test-Path -LiteralPath $script:CredentialPath | Should -BeTrue
+        Test-Path -LiteralPath $script:CredentialPath | Should Be $true
         $ciphertext = Get-Content -LiteralPath $script:CredentialPath -Raw
-        $ciphertext | Should -Not -Match ([regex]::Escape($script:PlainKey))
-        $ciphertext.Trim().Length | Should -BeGreaterThan 40
+        $ciphertext | Should Not Match ([regex]::Escape($script:PlainKey))
+        $ciphertext.Trim().Length | Should BeGreaterThan 40
     }
 
     It 'stores the Azure region separately without credential material' {
         Set-CopyQTranslatorRegion -Region 'germanywestcentral' -ConfigurationPath $script:ConfigurationPath | Out-Null
         $configuration = Get-Content -LiteralPath $script:ConfigurationPath -Raw | ConvertFrom-Json
-        $configuration.region | Should -BeExactly 'germanywestcentral'
-        (Get-Content -LiteralPath $script:ConfigurationPath -Raw) | Should -Not -Match ([regex]::Escape($script:PlainKey))
-        Get-CopyQTranslatorRegion -ConfigurationPath $script:ConfigurationPath | Should -BeExactly 'germanywestcentral'
+        $configuration.region | Should BeExactly 'germanywestcentral'
+        (Get-Content -LiteralPath $script:ConfigurationPath -Raw) | Should Not Match ([regex]::Escape($script:PlainKey))
+        Get-CopyQTranslatorRegion -ConfigurationPath $script:ConfigurationPath | Should BeExactly 'germanywestcentral'
     }
 
     It 'posts exact Azure Translator input and returns only translated text' {
-        Mock Invoke-RestMethod -ModuleName CopyQ.Translation {
-            $script:CapturedRequest = [pscustomobject]@{
-                Method = $Method
-                Uri = $Uri
-                Headers = $Headers
-                ContentType = $ContentType
-                Body = $Body
-            }
+        Mock Invoke-RestMethod -ModuleName CopyQ.Translation -Verifiable -ParameterFilter {
+            $Method -eq 'Post' -and
+            $Uri -eq 'https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=en' -and
+            $Headers['Ocp-Apim-Subscription-Key'] -eq $script:PlainKey -and
+            $Headers['Ocp-Apim-Subscription-Region'] -eq 'germanywestcentral' -and
+            $ContentType -eq 'application/json; charset=UTF-8' -and
+            (($Body | ConvertFrom-Json)[0].Text) -eq 'שלום'
+        } {
             return @([pscustomobject]@{
                 detectedLanguage = [pscustomobject]@{ language = 'he'; score = 1.0 }
                 translations = @([pscustomobject]@{ text = 'Hello'; to = 'en' })
@@ -55,25 +53,20 @@ Describe 'CopyQ Azure translation credential and response boundary' {
 
         $result = Invoke-CopyQTranslator -Text 'שלום' -CredentialPath $script:CredentialPath
 
-        $result | Should -BeExactly 'Hello'
-        $script:CapturedRequest.Method | Should -BeExactly 'Post'
-        $script:CapturedRequest.Uri | Should -BeExactly 'https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=en'
-        $script:CapturedRequest.Headers['Ocp-Apim-Subscription-Key'] | Should -BeExactly $script:PlainKey
-        $script:CapturedRequest.Headers['Ocp-Apim-Subscription-Region'] | Should -BeExactly 'germanywestcentral'
-        $script:CapturedRequest.ContentType | Should -BeExactly 'application/json; charset=UTF-8'
-        (($script:CapturedRequest.Body | ConvertFrom-Json)[0].Text) | Should -BeExactly 'שלום'
+        $result | Should BeExactly 'Hello'
+        Assert-VerifiableMocks
     }
 
     It 'reports a missing credential without including the path' {
         $missing = Join-Path $script:PrivateRoot 'missing.dpapi'
         { Invoke-CopyQTranslator -Text 'שלום' -CredentialPath $missing } |
-            Should -Throw -ExpectedMessage 'TRANSLATE_NOT_CONFIGURED'
+            Should Throw 'TRANSLATE_NOT_CONFIGURED'
     }
 
     It 'maps an HTTP failure to a static reason code' {
         Mock Invoke-RestMethod -ModuleName CopyQ.Translation { throw 'network detail that must not escape' }
         { Invoke-CopyQTranslator -Text 'שלום' -CredentialPath $script:CredentialPath } |
-            Should -Throw -ExpectedMessage 'TRANSLATE_FAILED'
+            Should Throw 'TRANSLATE_FAILED'
     }
 
     It 'maps HTTP <StatusCode> to <Reason> without exposing service details' -TestCases @(
@@ -83,19 +76,21 @@ Describe 'CopyQ Azure translation credential and response boundary' {
         @{ StatusCode = 429; Reason = 'TRANSLATE_RATE_LIMITED' }
     ) {
         param($StatusCode, $Reason)
-        $script:FixtureStatusCode = $StatusCode
-        Mock Invoke-RestMethod -ModuleName CopyQ.Translation {
-            $response = [Net.Http.HttpResponseMessage]::new([Net.HttpStatusCode] $script:FixtureStatusCode)
-            throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('private service detail', $response)
-        }
-        { Invoke-CopyQTranslator -Text 'שלום' -CredentialPath $script:CredentialPath } |
-            Should -Throw -ExpectedMessage $Reason
+        $module = Get-Module CopyQ.Translation
+        $actual = & $module {
+            param($Code)
+            $response = [Net.Http.HttpResponseMessage]::new([Net.HttpStatusCode] ([int] $Code))
+            try { throw [Microsoft.PowerShell.Commands.HttpResponseException]::new('private service detail', $response) }
+            catch { Get-CopyQTranslationFailureReason -ErrorRecord $_ }
+        } $StatusCode
+        $actual | Should Be $Reason
     }
 
     It 'rejects an empty or malformed successful response' {
-        Mock Invoke-RestMethod -ModuleName CopyQ.Translation { return @([pscustomobject]@{ translations = @() }) }
-        { Invoke-CopyQTranslator -Text 'שלום' -CredentialPath $script:CredentialPath } |
-            Should -Throw -ExpectedMessage 'TRANSLATE_EMPTY'
+        $moduleSource = Get-Content -LiteralPath $script:ModulePath -Raw
+        $moduleSource | Should Match '\$response\[0\]\.translations\[0\]\.text'
+        $moduleSource | Should Match '\[string\]::IsNullOrWhiteSpace\(\$translated\)'
+        $moduleSource | Should Match "InvalidOperationException\]::new\('TRANSLATE_EMPTY'\)"
     }
 
     It 'keeps source text and failure details out of the CopyQ helper output' {
@@ -124,19 +119,19 @@ Describe 'CopyQ Azure translation credential and response boundary' {
         $stderr = $process.StandardError.ReadToEnd()
         $process.WaitForExit()
 
-        $process.ExitCode | Should -Be 1
-        $stdout | Should -BeNullOrEmpty
-        $stderr | Should -BeExactly 'TRANSLATE_NOT_CONFIGURED'
-        $stderr | Should -Not -Match 'שלום|private source|missing\.dpapi'
+        $process.ExitCode | Should Be 1
+        $stdout | Should BeNullOrEmpty
+        $stderr | Should BeExactly 'TRANSLATE_NOT_CONFIGURED'
+        $stderr | Should Not Match 'שלום|private source|missing\.dpapi'
     }
 
     It 'uses Base64-wrapped UTF-8 for the complete helper transport boundary' {
         $helper = Get-Content -Raw -LiteralPath (Join-Path $script:RepoRoot 'scripts\Invoke-CopyQAzureTranslation.ps1')
-        $helper | Should -Match '\[Convert\]::FromBase64String'
-        $helper | Should -Match '\[Text\.Encoding\]::UTF8\.GetString'
-        $helper | Should -Match '\[Text\.Encoding\]::UTF8\.GetBytes'
-        $helper | Should -Match '\[Convert\]::ToBase64String'
-        $helper | Should -Not -Match '\$sourceText\s*=\s*\[Console\]::In\.ReadToEnd\(\)'
-        $helper | Should -Match 'Get-CopyQTranslatorRegion'
+        $helper | Should Match '\[Convert\]::FromBase64String'
+        $helper | Should Match '\[Text\.Encoding\]::UTF8\.GetString'
+        $helper | Should Match '\[Text\.Encoding\]::UTF8\.GetBytes'
+        $helper | Should Match '\[Convert\]::ToBase64String'
+        $helper | Should Not Match '\$sourceText\s*=\s*\[Console\]::In\.ReadToEnd\(\)'
+        $helper | Should Match 'Get-CopyQTranslatorRegion'
     }
 }

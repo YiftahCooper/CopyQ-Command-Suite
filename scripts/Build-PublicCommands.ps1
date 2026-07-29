@@ -61,7 +61,7 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($modelJson)) {
     throw 'PUBLIC_COMMAND_MODEL_FAILED'
 }
 $model = $modelJson | ConvertFrom-Json
-if (@($model.commands).Count -ne 16) { throw 'PUBLIC_COMMAND_COUNT_INVALID' }
+if (@($model.commands).Count -ne 18) { throw 'PUBLIC_COMMAND_COUNT_INVALID' }
 
 $session = 'cqpub-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
 $privateRoot = [IO.Path]::GetFullPath((Join-Path $env:TEMP $session))

@@ -19,7 +19,7 @@ Describe 'Public dependency and translation installation helpers' {
     }
 
     It 'reports every optional dependency as structured read-only data' {
-        Test-Path -LiteralPath $script:DependencyScript -PathType Leaf | Should -BeTrue
+        Test-Path -LiteralPath $script:DependencyScript -PathType Leaf | Should Be $true
         $before = @(Get-ChildItem -LiteralPath $script:PrivateRoot -Recurse -Force).Count
         $json = & $script:DependencyScript `
             -LocalAppData $script:PrivateRoot `
@@ -28,18 +28,18 @@ Describe 'Public dependency and translation installation helpers' {
             -AsJson
         $result = $json | ConvertFrom-Json
         foreach ($name in @('CopyQ', 'Marked', 'Python', 'Pygments', 'Tesseract', 'TesseractLanguages', 'PowerShell', 'Moonlander')) {
-            $result.PSObject.Properties.Name | Should -Contain $name
+            ($result.PSObject.Properties.Name -contains $name) | Should Be $true
         }
-        @(Get-ChildItem -LiteralPath $script:PrivateRoot -Recurse -Force).Count | Should -Be $before
-        $json | Should -Not -Match 'azure-key|Subscription-Key|Bearer '
+        @(Get-ChildItem -LiteralPath $script:PrivateRoot -Recurse -Force).Count | Should Be $before
+        $json | Should Not Match 'azure-key|Subscription-Key|Bearer '
     }
 
     It 'copies only the portable translation runtime when configuration is skipped' {
-        Test-Path -LiteralPath $script:InstallScript -PathType Leaf | Should -BeTrue
+        Test-Path -LiteralPath $script:InstallScript -PathType Leaf | Should Be $true
         $destination = Join-Path $script:PrivateRoot 'translation'
         $result = & $script:InstallScript -DestinationRoot $destination -SkipConfiguration
-        $result | Should -BeExactly 'COPYQ_TRANSLATION_INSTALLED'
-        @(Get-ChildItem -LiteralPath $destination -File).Name | Sort-Object | Should -Be @(
+        $result | Should BeExactly 'COPYQ_TRANSLATION_INSTALLED'
+        @(Get-ChildItem -LiteralPath $destination -File).Name | Sort-Object | Should Be @(
             'CopyQ.Translation.psm1',
             'Invoke-CopyQAzureTranslation.ps1',
             'Set-CopyQAzureTranslator.ps1'

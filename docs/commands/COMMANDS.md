@@ -8,10 +8,32 @@ Each file below can be imported independently through CopyQ's command dialog (`F
 
 - Download: `commands/individual/canonical-dispatcher.ini`
 - Activation: automatic for new text clipboard items.
-- Behaviour: leaves image, URL, hidden, and CopyQ-owned data to their existing handlers; suppresses high-confidence secrets; routes text of at least 5,000 characters to `BIG`; routes detected code to `Code`; and promotes the sixth exact copy to `Frequent`.
-- Strength: replaces several order-sensitive automatic commands with one deterministic precedence chain and never logs clipboard content.
+- Behaviour: leaves images, hidden data, and CopyQ-owned data to existing handlers; suppresses high-confidence secrets; routes text of at least 5,000 characters to `BIG`, strong technical blocks to `Artifacts`, and detected source code to `Code`; URLs remain available to existing URL handlers. Every eligible text copy is counted independently of that primary destination.
+- Strength: replaces several order-sensitive automatic commands with one deterministic precedence chain and never logs clipboard content. A sixth copy creates a trimmed, text-only secondary entry in `Frequent` while the original stays in its normal tab.
 - Limitation: secret detection is deliberately conservative and can suppress opaque identifier-like strings.
-- Privacy: ignored values produce only `SECRET_IGNORED`; frequency state contains hashes, counts, and recency data rather than copied text.
+- Privacy: ignored values produce only `SECRET_IGNORED`; frequency state contains at most 4,096 hashes, counts, and recency values rather than copied text.
+- Dependencies: CopyQ 16.
+
+`Artifacts` requires a strong signal: a JSON object/array with at least two entries, a structured multiline PowerShell or shell command, a command transcript, multiple timestamped or level-prefixed log lines, a stack trace/backtrace, a unified diff, or a configuration block with at least three entries. A standalone path, `git status`, a one-line PowerShell command, a short identifier, an ordinary URL, normal prose, and normal Markdown prose stay outside `Artifacts`.
+
+### Move to Trash (Undoable)
+
+- Download: `commands/individual/move-to-trash-undoable.ini`
+- Activation: persistent CopyQ script loaded at startup; it has no menu action or shortcut.
+- Behaviour: chains any existing removal handler and copies each removable item, with all MIME formats, into `(trash)` before CopyQ removes it. One removal event is one undo batch. Items at least 30 days old are pruned at startup and before a new deletion.
+- Strength: covers deletion batches and CopyQ-generated removals such as history-limit eviction without a timer or background process.
+- Limitation: because all real removals are observed, `Ctrl+Z` restores the latest removal batch, which may not have originated from the Delete key. The existing 110-item tab limit also bounds `(trash)`.
+- Privacy: deleted content remains stored locally in `(trash)`. Delete it again from `(trash)` for immediate permanent removal.
+- Dependencies: CopyQ 16.
+
+### Undo Delete
+
+- Download: `commands/individual/undo-delete.ini`
+- Activation: `Ctrl+Z` while the CopyQ item window is focused, or the item context menu.
+- Behaviour: restores the newest trash batch to its source tab and approximate row, preserving MIME formats. Missing source tabs fall back to `&Clipboard`; `NOTHING_TO_UNDO` is shown when no batch exists.
+- Strength: deleting from `Frequent` resets qualification, while undo restores its saved count plus copies made after deletion and merges any requalified entry instead of duplicating it.
+- Limitation: it is a local CopyQ shortcut, not a system-wide undo. Deleting the trash copy or allowing it to expire permanently discards its saved Frequent count.
+- Privacy: restoration and notifications do not log item content, hashes, or restored text.
 - Dependencies: CopyQ 16.
 
 ### Remove Background and Text Colors
@@ -137,9 +159,9 @@ Each file below can be imported independently through CopyQ's command dialog (`F
 - Download: `commands/individual/show-frequent.ini`
 - Activation: menu or Meta+Shift+F.
 - Behaviour: opens the `Frequent` tab menu populated by Canonical Dispatcher.
-- Strength: one unambiguous global shortcut for frequently reused exact text.
+- Strength: one unambiguous global shortcut for a most-recently-used index of text copied at least six times across normal history, URLs, `BIG`, `Artifacts`, and `Code`.
 - Limitation: useful only when Canonical Dispatcher is installed and frequency promotion has occurred.
-- Privacy: local only; frequency counters do not store copied text.
+- Privacy: local only; frequency counters do not store copied text. Leading/trailing whitespace variants share one counter and the indexed form is trimmed.
 - Dependencies: CopyQ 16.
 
 ## Moonlander selected-text tools
