@@ -26,6 +26,8 @@ The repository contains only original commands and independent, substantial rewr
 
 These eleven commands are not distributed in this repository:
 
+The legacy **Copy URL (web address) to other tab** should now be disabled when using Canonical Dispatcher: its `&web` destination duplicates the dispatcher's `&URLs` routing. **Tab for URLs with Title and Icon** remains optional enrichment after the dispatcher, with a standalone-URL filter. Its network requests and URL logging are separate from the suite's offline routing and content-free notifications.
+
 | Command | Original source | Known contributors |
 |---|---|---|
 | Render HTML | [Source](https://github.com/hluk/copyq-commands/blob/master/commands/render-html.ini) | `hluk` |

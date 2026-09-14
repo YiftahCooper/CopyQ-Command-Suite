@@ -20,6 +20,38 @@ The repository distributes eighteen original or independently rewritten commands
 
 Importing a command file does not install external programs and does not change CopyQ clipboard history or tabs.
 
+Put **Canonical Dispatcher first in the command list**, ahead of all automatic commands, including community image and URL handlers. Importing a replacement can append it at the bottom: move it back to the top before applying. Earlier commands can store or fetch data before a later `ignore()` call.
+
+### Updating an existing setup: secret redaction and URL routing
+
+1. In `F6`, select all current commands and save a command backup outside the checkout.
+2. Replace only **Canonical Dispatcher** with `commands/individual/canonical-dispatcher.ini` and move it to the top. Leave its Format field empty so concealment metadata is checked even without plain text.
+3. Disable **Copy URL (web address) to other tab** if it targets `&web`. The dispatcher now routes standalone HTTP(S), FTP(S), and file URLs into `&URLs` without requiring an HTML response or a network connection.
+4. If retaining **Tab for URLs with Title and Icon**, keep it after the dispatcher and set its Content filter to `^https?://\S+$`. It is optional enrichment, not the storage gate. That upstream command fetches copied addresses and can log URLs; disable it if automatic fetching is unwanted.
+5. Apply once. Existing history is not migrated or deleted by this update. Keep the old `web` tab until its unique items are safely preserved; blindly combining two full tabs can exceed CopyQ's item limit. Do not bulk-copy known credentials into `URLs`.
+
+To roll back the commands, replace the command list with the saved backup (do not append the backup to the existing commands). History is unaffected by this command-only update.
+
+### Original paste versus redacted paste
+
+For newly copied text containing a recognized embedded credential:
+
+| Action | Result |
+|---|---|
+| Copy, then paste normally with Ctrl+V | Original text from the current Windows clipboard, including the credential. |
+| Select/paste the saved item from CopyQ | Text with the credential permanently replaced by `[REDACTED]`. |
+| Copy something else, then return to the older CopyQ item | Only the redacted version is available; CopyQ has no hidden original to restore. |
+
+Selecting the saved item is also the way to share the redacted version immediately. It replaces the current clipboard with that safe history item. There is no new shortcut, vault, timeout, or recover-original command. The original can remain on the current Windows clipboard until something replaces it; this feature does not securely erase process memory or control Windows clipboard history/cloud sync, other clipboard tools, or the source application.
+
+Whole standalone keys and password-manager concealment metadata continue to be **excluded** from history, with `SECRET_IGNORED`. Mixed documents instead receive `SECRET_REDACTED`. Recognized embedded forms include supported provider-prefixed tokens, structurally valid JWTs, private-key PEM blocks, authorization headers, and explicit password/token/secret/API-key assignments. Generic mixed-case words and unlabeled hashes inside documents are not guessed to be secrets.
+
+Ordinary URLs remain intact, including random-looking paths, IDs, and query values. Exceptions are recognizable credential forms: a password in URL user information, explicitly named `access_token`, `api_key`/`apikey`/`api-key`, `password`, `secret`, or `token` parameters, and private Google Calendar ICS feed tokens. Only the credential component is replaced. A redacted credential URL is for reference/sharing and may no longer work.
+
+When redaction is needed, the history payload discards **all original alternate formats**, including HTML, RTF, image and custom data, not just the visible secret. Later renderers may generate fresh HTML from the sanitized text. The original rich formatting remains available through immediate ordinary paste, but it cannot be recovered from the saved history item. Redacted items are excluded from frequency counting. Undo can restore the redacted item, never its removed credential.
+
+For a harmless acceptance test, copy `Please use ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa for this request`. Paste directly into a disposable editor: expect the original. Then choose the new item from CopyQ: expect `Please use [REDACTED] for this request`. Repeat using the mouse copy action and a website copy button with **synthetic data only**. A browser/mouse-specific live result still needs this check; automated tests do not operate your physical devices.
+
 ## What is included
 
 | Area | Commands |
@@ -48,7 +80,7 @@ The [full catalogue](docs/commands/COMMANDS.md) explains activation, dependencie
 
 ## Azure translation setup
 
-Translation is optional and is the only feature that sends selected content to a network service. Create an Azure Translator resource, note its region, then run:
+Translation is optional and sends selected text to Azure. Separately installed community URL enrichment can fetch copied addresses automatically. Create an Azure Translator resource, note its region, then run:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\Install-CopyQTranslation.ps1 -Region germanywestcentral
@@ -70,7 +102,9 @@ If those keys are already assigned to other CopyQ commands, resolve the collisio
 
 ## Privacy and failure behaviour
 
-- Canonical Dispatcher keeps high-confidence secrets out of CopyQ history and shows the content-free reason `SECRET_IGNORED`.
+- Canonical Dispatcher excludes standalone secrets (`SECRET_IGNORED`) and permanently redacts recognized credentials in mixed text (`SECRET_REDACTED`) before saving it. Notifications contain reason codes, not copied content.
+- Secret checks precede image/owner passthrough, and a notification failure cannot skip suppression. Private Google Calendar ICS capability links are sensitive URLs; public feeds, normal addresses, and local/file URLs are not automatically secrets.
+- Detection is heuristic: unfamiliar, unlabeled or encoded secrets can still escape it, and explicit credential-like labels can produce false positives. This is not encryption, a guaranteed secret detector, or retroactive cleanup of old history, trash, exports or backups. If rewriting the history payload fails, the item is excluded and `SECRET_REDACTION_FAILED` is reported.
 - Substantial JSON, command blocks, transcripts, logs, stack traces, diffs, and configuration blocks route to `Artifacts`; short commands, standalone paths, `git status`, and ordinary prose stay in the normal history.
 - Eligible text from normal history, `&URLs`, `BIG`, `Artifacts`, and `Code` is counted independently of its primary tab. On copy six, a trimmed text-only copy is added to `Frequent`; the primary item remains where it belongs.
 - Frequency state stores at most 4,096 dual-hash counters and recency values, not copied text. Leading and trailing whitespace do not create separate counters.

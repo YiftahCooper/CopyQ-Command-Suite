@@ -5,12 +5,12 @@ const runtime = require("./runtime");
 function command(internalId, name, cmd, options) {
   const settings = options || {};
   const globalShortcuts = settings.globalShortcuts || [];
-  return { internalId, name, cmd, automatic: !!settings.automatic, isScript: settings.isScript === true, inMenu: settings.inMenu !== false, input: settings.input || "text/plain", display: settings.display === true, isGlobalShortcut: globalShortcuts.length > 0, globalShortcuts, shortcuts: settings.shortcuts || [] };
+  return { internalId, name, cmd, automatic: !!settings.automatic, isScript: settings.isScript === true, inMenu: settings.inMenu !== false, input: settings.input === undefined ? "text/plain" : settings.input, display: settings.display === true, isGlobalShortcut: globalShortcuts.length > 0, globalShortcuts, shortcuts: settings.shortcuts || [] };
 }
 
 function buildCandidate() {
   return { schema: 2, commands: [
-    command("canonical.dispatcher", "Canonical Dispatcher", runtime.dispatcherBody(), { automatic: true, inMenu: false, display: false }),
+    command("canonical.dispatcher", "Canonical Dispatcher", runtime.dispatcherBody(), { automatic: true, inMenu: false, display: false, input: "" }),
     command("canonical.undoable-delete-listener", "Move to Trash (Undoable)", runtime.undoableDeleteListenerBody(), { isScript: true, inMenu: false }),
     command("canonical.undo-delete", "Undo Delete", runtime.undoDeleteBody(), { shortcuts: ["ctrl+z"] }),
     command("canonical.html-sanitizer", "Remove Background and Text Colors", runtime.htmlSanitizerBody(), { automatic: true, input: "text/html" }),

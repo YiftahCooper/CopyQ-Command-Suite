@@ -12,7 +12,62 @@ const Core = vm.runInNewContext(sharedSource + "\nCopyQCore;", {});
 const { buildCandidate } = require("../src/commands");
 
 function dispatcher() { return buildCandidate().commands.find((entry) => entry.internalId === "canonical.dispatcher"); }
+
+test("dispatcher suppresses a secret even if the notification backend throws", () => {
+  let ignored = false;
+  const stop = new Error("stopped");
+  const context = {
+    dataFormats: () => ["text/plain"], data: () => "ghp_abcdefghijklmnopqrstuvwxyz1234567890",
+    str: String, mimeText: "text/plain", mimeOwner: "owner", mimeHidden: "hidden",
+    notification: () => { throw new Error("notification backend unavailable"); },
+    ignore: () => { ignored = true; }, abort: () => { throw stop; },
+  };
+  try { vm.runInNewContext(dispatcher().cmd.replace(/^copyq:\s*/, ""), context); } catch (_) {}
+  assert.equal(ignored, true);
+});
+
+test("dispatcher suppresses conceal metadata even without plain text", () => {
+  let ignored = false;
+  const context = {
+    dataFormats: () => ["image/png", "Clipboard Viewer Ignore"], data: () => "",
+    str: String, mimeText: "text/plain", mimeOwner: "owner", mimeHidden: "hidden",
+    notification: () => {}, ignore: () => { ignored = true; }, abort: () => { throw new Error("stopped"); },
+  };
+  try { vm.runInNewContext(dispatcher().cmd.replace(/^copyq:\s*/, ""), context); } catch (_) {}
+  assert.equal(ignored, true);
+});
 function runtimeOnly(command) { return command.slice(command.lastIndexOf("}());") + 5); }
+
+test("dispatcher removes alternate secret formats but never writes the system clipboard or frequency state", () => {
+  const raw = "Use ghp_" + "a".repeat(36) + " for this request";
+  const event = { "text/plain": raw, "text/html": raw, "text/rtf": raw, "custom/private": raw, "application/x-copyq-output-tab": "Test" };
+  const notices = [];
+  const context = {
+    dataFormats: () => Object.keys(event), data: (format) => event[format] || "", str: String,
+    mimeText: "text/plain", mimeOwner: "owner", mimeHidden: "hidden", mimeOutputTab: "application/x-copyq-output-tab",
+    removeData: (format) => { delete event[format]; }, setData: (format, value) => { event[format] = value; return true; },
+    notification: (...args) => notices.push(args), abort: () => { throw new Error("stopped"); },
+    copy: () => assert.fail("must not replace Windows clipboard"), settings: () => assert.fail("must not count redacted content"),
+    ignore: () => assert.fail("successful redaction must retain safe history"),
+  };
+  vm.runInNewContext(dispatcher().cmd.replace(/^copyq:\s*/, ""), context);
+  assert.deepEqual(event, { "text/plain": "Use [REDACTED] for this request", "application/x-copyq-output-tab": "Test" });
+  assert.equal(JSON.stringify(notices).includes(raw), false);
+  assert.match(JSON.stringify(notices), /SECRET_REDACTED/);
+});
+
+test("failed redaction suppresses the item even if error notification fails", () => {
+  let ignored = false;
+  const context = {
+    dataFormats: () => ["text/plain", "text/html"], data: () => "Use ghp_" + "a".repeat(36), str: String,
+    mimeText: "text/plain", mimeOwner: "owner", mimeHidden: "hidden", mimeOutputTab: "output",
+    removeData: () => { throw new Error("format removal failed"); },
+    notification: () => { throw new Error("notice failed"); }, ignore: () => { ignored = true; },
+    abort: () => { throw new Error("stop"); },
+  };
+  try { vm.runInNewContext(dispatcher().cmd.replace(/^copyq:\s*/, ""), context); } catch (_) {}
+  assert.equal(ignored, true);
+});
 
 test("the generated dispatcher embeds the exact ES5 core that Node executes", () => {
   assert.equal(dispatcher().cmd.includes(sharedSource), true);
@@ -24,7 +79,7 @@ test("dispatcher gives a content-free notification before ignoring a secret", ()
   const command = dispatcher().cmd;
   const notice = "notification('.id', 'secret-ignore', '.title', 'Ignoring secret in the clipboard', '.message', 'SECRET_IGNORED')";
   assert.equal(command.includes(notice), true);
-  assert.equal(command.indexOf(notice) < command.indexOf("ignore(); abort();"), true);
+  assert.equal(command.indexOf(notice) < command.indexOf("ignore();"), true);
   assert.equal(notice.includes("text"), false);
 });
 
@@ -125,7 +180,7 @@ test("generated commands use real conceal MIME values and safe operational comma
   const frequency = runtimeOnly(dispatch);
   assert.match(frequency, /frequent_usage_counts_v3/);
   assert.match(frequency, /CopyQCore\.recordFrequency/);
-  assert.equal((frequency.match(/ignore\(\)/g) || []).length, 1);
+  assert.doesNotMatch(frequency.slice(frequency.indexOf("var frequency = null")), /ignore\(\)/);
   assert.match(frequency, /setData\(mimeOutputTab, 'Artifacts'\)/);
   assert.match(frequency, /setData\(mimeOutputTab, 'BIG'\)/);
   assert.match(frequency, /setData\(mimeOutputTab, 'Code'\)/);

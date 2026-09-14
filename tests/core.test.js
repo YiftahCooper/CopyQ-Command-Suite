@@ -9,6 +9,45 @@ const { isHighConfidenceSecret } = require("../src/secrets");
 const { isCode, routeContent } = require("../src/routing");
 const { FrequencyStore, hashesFor, v2HashesFor, legacyKiloHash } = require("../src/frequency");
 const core = require("../src/core-node");
+
+test("redacts recognizable embedded secrets without guessing at ordinary prose and URL identifiers", () => {
+  const token = "ghp_" + "a".repeat(36);
+  const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.signature";
+  const pairs = [
+    [`Please use ${token} for this request.`, "Please use [REDACTED] for this request."],
+    ['{"password":"two words", "result":"ok"}', '{"password":"[REDACTED]", "result":"ok"}'],
+    ['{"password":"$ecret123!", "result":"ok"}', '{"password":"[REDACTED]", "result":"ok"}'],
+    ['Configuration:\nAZURE_API_KEY="' + "a".repeat(32) + '"\nregion=west', 'Configuration:\nAZURE_API_KEY="[REDACTED]"\nregion=west'],
+    ['Configuration:\nAPI_KEY=' + "a".repeat(32) + '\nregion=west', 'Configuration:\nAPI_KEY=[REDACTED]\nregion=west'],
+    [`Request:\nAuthorization: Bearer ${token}\nAccept: text/plain`, "Request:\nAuthorization: Bearer [REDACTED]\nAccept: text/plain"],
+    [`The JWT is ${jwt}. Keep it private.`, "The JWT is [REDACTED]. Keep it private."],
+    ["Key follows:\n-----BEGIN PRIVATE KEY-----\nYWJj\n-----END PRIVATE KEY-----\nDone", "Key follows:\n[REDACTED]\nDone"],
+    ["https://example.test/?access_token=abc123&q=hello", "https://example.test/?access_token=[REDACTED]&q=hello"],
+    ["See https://user:password@example.test/path", "See https://user:[REDACTED]@example.test/path"],
+    ["https://calendar.google.com/calendar/ical/example/private-" + "a".repeat(32) + "/basic.ics", "https://calendar.google.com/calendar/ical/example/private-[REDACTED]/basic.ics"],
+  ];
+  for (const [input, expected] of pairs) {
+    assert.equal(core.redactSecrets(input).text, expected);
+    assert.equal(core.redactSecrets(expected).text, expected, "redaction must be idempotent");
+    assert.equal(core.route({ text: input }).frequencyEligible, false);
+  }
+  for (const input of ["MixedCaseWords123 are ordinary prose", "Commit " + "a".repeat(40), "UUID 550e8400-e29b-41d4-a716-446655440000", "https://example.test/path/" + token + "?id=AbCd0123456789", "https://youtu.be/AbCd0123456", "https://example.test/?q=token=ordinary", "Use API_KEY=$env:API_KEY", "Use token=${ACCESS_TOKEN}"]) {
+    assert.equal(core.redactSecrets(input).text, input);
+    assert.equal(core.redactSecrets(input).redacted, false);
+  }
+});
+
+test("mixed text is stored redacted, while standalone secrets and conceal metadata remain excluded", () => {
+  const token = "ghp_" + "a".repeat(36);
+  assert.equal(core.route({ text: token }).action, "ignored");
+  assert.equal(core.route({ text: "API_KEY=" + "a".repeat(32) }).action, "ignored");
+  assert.equal(core.route({ text: "Please use " + token, formats: ["Clipboard Viewer Ignore"] }).action, "ignored");
+  const result = core.route({ text: '{"token":"' + token + '","ok":true}' });
+  assert.equal(result.action, "artifacts");
+  assert.equal(result.redactedText, '{"token":"[REDACTED]","ok":true}');
+  assert.equal(result.frequencyEligible, false);
+  assert.equal(core.route({ text: "Note " + token, formats: ["image/png"] }).redactedText, "Note [REDACTED]");
+});
 const { commandIdentity, mergeCommands } = require("../src/merge");
 const { findDuplicates } = require("../src/inventory");
 const { buildCandidate, stableStringify } = require("../src/commands");
@@ -44,6 +83,33 @@ test("restores conservative opaque-secret protection with structured exemptions"
 test("routes BIG only at the exact 5000-character threshold", () => {
   assert.equal(routeContent({ text: "a".repeat(4999) }).action, "default");
   assert.equal(routeContent({ text: "a".repeat(5000) }).action, "big");
+});
+
+test("secret checks precede image and CopyQ metadata passthrough", () => {
+  for (const formats of [["image/png"], ["application/x-copyq-owner"], ["image/png", "Clipboard Viewer Ignore"]]) {
+    assert.equal(routeContent({ text: "ghp_abcdefghijklmnopqrstuvwxyz1234567890", formats, mimeOwner: "application/x-copyq-owner" }).action, "ignored");
+  }
+  assert.equal(routeContent({ text: "", formats: ["image/png", "Clipboard Viewer Ignore"] }).action, "ignored");
+});
+
+test("invisible formatting does not disguise a standalone key", () => {
+  assert.equal(isHighConfidenceSecret("\u200bghp_abcdefghijklmnopqrstuvwxyz1234567890\u200b"), true);
+  assert.equal(isHighConfidenceSecret("\u2066OpaqueSecret123456\u2069"), true);
+});
+
+test("private calendar capability URLs are secrets but public calendar and normal URLs are allowed", () => {
+  assert.equal(isHighConfidenceSecret("https://calendar.google.com/calendar/ical/example%40group.calendar.google.com/private-" + "a".repeat(32) + "/basic.ics"), true);
+  for (const url of ["https://calendar.google.com/calendar/ical/example/public/basic.ics", "https://calendar.google.com/calendar/embed?src=example", "https://example.test/?q=Mixed123", "https://192.168.1.2:8443", "file:///D:/images/a%20photo.jpeg"]) {
+    assert.equal(isHighConfidenceSecret(url), false, url);
+  }
+});
+
+test("URL routing covers standalone HTTP FTP and file links without requiring a fetch", () => {
+  for (const text of ["https://example.test/feed.ics", "https://localhost:8200", "https://192.168.1.2:8443", "ftp://example.test/file", "ftps://example.test/file", "file:///D:/images/a photo.jpeg"]) {
+    assert.equal(routeContent({ text }).action, "url", text);
+    assert.equal(routeContent({ text }).frequencyEligible, true);
+  }
+  assert.equal(routeContent({ text: "https://example.test/\nA message for a friend" }).action, "default");
 });
 
 test("routes code without classifying prose as code", () => {
@@ -85,7 +151,7 @@ test("routing keeps primary placement separate from frequency eligibility", () =
   );
   assert.deepEqual(
     { ...routeContent({ text: "https://example.test/thing" }) },
-    { action: "passthrough", frequencyEligible: true },
+    { action: "url", frequencyEligible: true },
   );
   assert.deepEqual(
     { ...routeContent({ text: "a".repeat(5000) }) },

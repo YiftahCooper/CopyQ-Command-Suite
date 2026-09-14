@@ -193,7 +193,7 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
         Invoke-IsolatedEval "tab('Dispatcher Input');insert(0,'  index me  ');'READY'" | Should Be 'READY'
         $key = $null
         for ($copyNumber = 1; $copyNumber -le 6; $copyNumber += 1) {
-            Invoke-IsolatedEval "tab('Dispatcher Input');var dispatcher=commands().filter(function(x){return x.internalId==='canonical.dispatcher';})[0];action(0,dispatcher.cmd);'STARTED'" | Should Be 'STARTED'
+            Invoke-IsolatedEval "setData(mimeText,'  index me  ');setData(mimeOutputTab,'Dispatcher Input');if(runAutomaticCommands())saveData();'STARTED'" | Should Be 'STARTED'
             for ($attempt = 0; $attempt -lt 40; $attempt += 1) {
                 Start-Sleep -Milliseconds 50
                 $snapshot = Invoke-IsolatedEval "var state=JSON.parse(settings('frequent_usage_counts_v3'));JSON.stringify(state.counters)" | ConvertFrom-Json
@@ -210,5 +210,54 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
         $primary = Invoke-IsolatedEval "tab('Dispatcher Input');JSON.stringify({count:size(),text:str(read(mimeText,0))})" | ConvertFrom-Json
         $primary.count | Should Be 1
         $primary.text | Should Be '  index me  '
+    }
+
+    It 'routes URLs through real automatic commands and saves them without a network request' {
+        foreach ($url in @('https://example.test/feed.ics', 'https://localhost:8200', 'https://192.168.1.2:8443', 'ftps://example.test/file', 'file:///D:/images/a photo.jpeg')) {
+            $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($url))
+            $result = Invoke-IsolatedEval "setData(mimeText,fromBase64('$encoded'));setData(mimeOutputTab,'URL Fallback Test');var accepted=runAutomaticCommands();if(accepted)saveData();JSON.stringify({accepted:accepted,destination:str(data(mimeOutputTab))})" | ConvertFrom-Json
+            $result.accepted | Should Be $true
+            $result.destination | Should Be '&URLs'
+            Invoke-IsolatedEval "tab('&URLs');str(read(mimeText,0))" | Should Be $url
+        }
+        Invoke-IsolatedEval "String(tab().indexOf('URL Fallback Test'))" | Should Be '-1'
+    }
+
+    It 'stores only redacted MIME data and undo cannot recover the original secret' {
+        $result = Invoke-IsolatedEval "var raw='Use ghp_' + Array(37).join('a') + ' for this request';var prior=settings('frequent_usage_counts_v3');setData(mimeText,raw);setData(mimeHtml,'<b>'+raw+'</b>');setData('text/rtf',raw);setData('application/x-private-test',raw);setData(mimeOutputTab,'Redaction Test');var accepted=runAutomaticCommands();if(accepted)saveData();tab('Redaction Test');var item=getItem(0);JSON.stringify({accepted:accepted,text:str(item[mimeText]),formats:Object.keys(item),frequencyUnchanged:prior===settings('frequent_usage_counts_v3'),leaked:Object.keys(item).some(function(k){return str(item[k]).indexOf('ghp_')>=0;})})" | ConvertFrom-Json
+        $result.accepted | Should Be $true
+        $result.text | Should Be 'Use [REDACTED] for this request'
+        $result.formats | Should Be @('text/plain')
+        $result.frequencyUnchanged | Should Be $true
+        $result.leaked | Should Be $false
+        Invoke-IsolatedEval "tab('Redaction Test');remove(0);tab('(trash)');str(read(mimeText,0))" | Should Be 'Use [REDACTED] for this request'
+        Invoke-IsolatedEval "var c=commands().filter(function(x){return x.internalId==='canonical.undo-delete';})[0];eval(c.cmd.replace(/^copyq:\\s*/,''));'UNDONE'" | Should Be 'UNDONE'
+        Invoke-IsolatedEval "tab('Redaction Test');var item=getItem(0);String(Object.keys(item).some(function(k){return str(item[k]).indexOf('ghp_')>=0;}))" | Should Be 'false'
+    }
+
+    It 'passes only sanitized text to later automatic commands and routes credential URLs safely' {
+        Invoke-IsolatedEval "var cs=commands();cs.push({name:'Test Safe Later Copy',automatic:true,tab:'Safe Later Copy',input:''});setCommands(cs);'READY'" | Should Be 'READY'
+        try {
+            Invoke-IsolatedEval "setData(mimeText,'https://example.test/?access_token=synthetic&q=hello');setData(mimeHtml,'synthetic raw alternate');setData(mimeOutputTab,'Wrong URL Tab');if(runAutomaticCommands())saveData();tab('&URLs');str(read(mimeText,0))" | Should Be 'https://example.test/?access_token=[REDACTED]&q=hello'
+            Invoke-IsolatedEval "tab('Safe Later Copy');str(read(mimeText,0))" | Should Be 'https://example.test/?access_token=[REDACTED]&q=hello'
+            Invoke-IsolatedEval "tab('Safe Later Copy');String(Object.keys(getItem(0)).indexOf(mimeHtml))" | Should Be '-1'
+        } finally {
+            Invoke-IsolatedEval "setCommands(commands().filter(function(c){return c.name!=='Test Safe Later Copy';}));'RESTORED'" | Out-Null
+        }
+    }
+
+    It 'suppresses synthetic secrets before a later automatic copy-to-tab action can store them' {
+        Invoke-IsolatedEval "var cs=commands();cs.push({name:'Test Later Copy',automatic:true,tab:'Must Stay Empty',input:''});setCommands(cs);'READY'" | Should Be 'READY'
+        try {
+            foreach ($extraFormat in @('text/html', 'image/png', 'application/x-copyq-owner')) {
+                $result = Invoke-IsolatedEval "setData(mimeText,'ghp_abcdefghijklmnopqrstuvwxyz1234567890');setData('$extraFormat','synthetic');setData(mimeOutputTab,'Secret Fallback Test');var accepted=runAutomaticCommands();if(accepted)saveData();String(accepted)"
+                $result | Should Be 'false'
+            }
+            Invoke-IsolatedEval "setData('image/png','synthetic');setData('Clipboard Viewer Ignore','1');String(runAutomaticCommands())" | Should Be 'false'
+            Invoke-IsolatedEval "String(tab().indexOf('Must Stay Empty'))" | Should Be '-1'
+            Invoke-IsolatedEval "String(tab().indexOf('Secret Fallback Test'))" | Should Be '-1'
+        } finally {
+            Invoke-IsolatedEval "setCommands(commands().filter(function(c){return c.name!=='Test Later Copy';}));'RESTORED'" | Out-Null
+        }
     }
 }
