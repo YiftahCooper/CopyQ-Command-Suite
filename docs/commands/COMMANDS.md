@@ -14,7 +14,7 @@ Each file below is a separate import through CopyQ's command dialog (`F6` → **
 - Privacy: whole secrets/concealment metadata are excluded (`SECRET_IGNORED`). Recognized credentials within documents are replaced with `[REDACTED]` in the stored item (`SECRET_REDACTED`). All original alternate formats are dropped for that item, and it is not frequency-counted. Ordinary paste still uses the current Windows clipboard original; selecting from history pastes only the sanitized version. Undo cannot recover removed credentials. Ordinary URL IDs stay intact; explicit credential parameters, embedded URL passwords and private Google Calendar feed tokens are redacted. This does not control other clipboard managers or Windows clipboard history. Frequency state contains at most 4,096 hashes, counts, and recency values rather than copied text.
 - Dependencies: CopyQ 16.
 
-`Artifacts` requires a strong signal: a JSON object/array with at least two entries, a structured multiline PowerShell or shell command, a command transcript, multiple timestamped or level-prefixed log lines, a stack trace/backtrace, a unified diff, or a configuration block with at least three entries. A standalone path, `git status`, a one-line PowerShell command, a short identifier, an ordinary URL, normal prose, and normal Markdown prose stay outside `Artifacts`.
+`Artifacts` requires a strong signal: a JSON object/array with at least two entries, a structured multiline PowerShell or shell command, a command transcript, multiple timestamped or level-prefixed log lines, a stack trace/backtrace, a unified diff, or a configuration block with at least three entries. A standalone path, `git status`, a one-line PowerShell command, a short identifier, an ordinary URL, normal prose, and normal Markdown prose stay outside `Artifacts`. Bare `#` headings and `>` quotations do not count as shell prompts; transcripts need an unambiguous prompt such as `$`, `PS C:\work>`, or `user@host:~#`.
 
 ### Secret Protection (Standalone) — optional alternative
 
@@ -72,7 +72,7 @@ Each file below is a separate import through CopyQ's command dialog (`F6` → **
 
 - Download: [commands/individual/highlight-code.ini](../../commands/individual/highlight-code.ini)
 - Activation: context menu on a text item.
-- Behaviour: asks Pygments to detect the language and adds continuous, wrapped, CopyQ-compatible highlighted HTML.
+- Behaviour: uses Python highlighting for recognizable `def`, `async def`, and `class` declarations ending with a colon; otherwise asks Pygments to detect the language. Adds continuous, wrapped, CopyQ-compatible highlighted HTML.
 - Strength: uses a readable monospace layout without the separated beige line backgrounds produced by many CopyQ highlighting snippets.
 - Limitation: automatic language guessing is imperfect; failure reports `PYGMENTS_FAILED`.
 - Privacy: local only.
@@ -82,10 +82,10 @@ Each file below is a separate import through CopyQ's command dialog (`F6` → **
 
 - Download: [commands/individual/copy-text-in-image.ini](../../commands/individual/copy-text-in-image.ini)
 - Activation: select a PNG item and use the context menu, or press Meta+Ctrl+T.
-- Behaviour: passes the selected PNG directly to Tesseract and copies detected English/Hebrew text.
+- Behaviour: passes the selected PNG directly to Tesseract and copies detected English/Hebrew text. Resolves the executable under `%ProgramFiles%\Tesseract-OCR` first, then checks directories in `PATH`, before launching an existing file.
 - Strength: operates on the selected CopyQ image instead of opening a screenshot crosshair or language prompt.
-- Limitation: the default language model is `eng+heb`; low-quality images can return no text. Failures use `OCR_NO_PNG`, `OCR_NO_TEXT`, or `OCR_FAILED`.
-- Privacy: local only.
+- Limitation: the default language model is `eng+heb`; low-quality images can return no text. Failures use `OCR_NOT_FOUND`, `OCR_NO_PNG`, `OCR_NO_TEXT`, or `OCR_FAILED`. Success replaces the clipboard with text; it does not replace the selected image in the history view.
+- Privacy: local only. Azure and a translation subscription are not required.
 - Dependencies: CopyQ 16, Tesseract OCR, Tesseract eng, and Tesseract heb.
 
 ## Translation

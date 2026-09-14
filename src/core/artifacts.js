@@ -19,7 +19,9 @@ function isArtifact(value) {
   if (/^diff --git\s/m.test(text) || /^@@\s+-\d+(?:,\d+)?\s+\+\d+(?:,\d+)?\s+@@/m.test(text)) return true;
   if (/---\s+backtrace\s+---/i.test(text) || /^Traceback \(most recent call last\):/m.test(text)) return true;
   matches = text.match(/^\s*at\s+\S.+$/gm); if (matches && matches.length >= 2) return true;
-  if (/^(?:PS\s+[A-Za-z]:\\[^>\r\n]*>|[$#>])\s*\S/m.test(text)) return true;
+  // Bare # and > also introduce Markdown headings and quotations. Require an
+  // unambiguous prompt ($, PowerShell, or user@host) for transcript routing.
+  if (/^(?:PS\s+[A-Za-z]:\\[^>\r\n]*>|\$|[\w.-]+@[\w.-]+:[^\r\n]*?[$#])\s*\S/m.test(text)) return true;
   if (/`\s*$/m.test(text) && /^\s{2,}-(?:\w|-)\S*/m.test(text)) return true;
   matches = text.match(/^(?:\[[0-2]?\d:[0-5]\d:[0-5]\d\]|\d{4}-\d{2}-\d{2}[T ][^\s]+|\s*(?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL)\b).+$/gim);
   if (matches && matches.length >= 2) return true;
@@ -29,4 +31,3 @@ function isArtifact(value) {
 }
 
 module.exports = { isArtifact: isArtifact };
-

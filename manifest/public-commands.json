@@ -476,7 +476,19 @@
     "src/runtime/secret-protection.js",
     "tests/modular-commands.test.js",
     "commands/alternatives/secret-protection.ini",
-    "docs/ARCHITECTURE.md"
+    "docs/ARCHITECTURE.md",
+    "CopyQ-Setup.cmd",
+    "modules/CopyQ.Setup.psm1",
+    "scripts/Setup-CopyQ.ps1",
+    "scripts/Build-SetupPackage.ps1",
+    "scripts/setup/command-plan.js",
+    "scripts/setup/bridge.js",
+    "scripts/setup/wizard.ps1",
+    "docs/SETUP.md",
+    "tests/setup-plan.test.js",
+    "tests/setup-host.Tests.ps1",
+    "tests/setup-ui.Tests.ps1",
+    "tests/setup-package.Tests.ps1"
   ],
   "alternatives": [
     {

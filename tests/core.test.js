@@ -175,6 +175,17 @@ test("routing keeps primary placement separate from frequency eligibility", () =
   );
 });
 
+test("Markdown headings and quotations are not shell transcript prompts", () => {
+  const markdown = "# CopyQ rendering test\n\nThis sentence contains **bold text** and *italic text*.\n\n- First test item\n- Second test item\n\n[Harmless example link](https://example.com)";
+  for (const text of [markdown, "> A quoted sentence\n> Another quoted sentence", "# A heading\n\nNormal prose."]) {
+    assert.equal(core.isArtifact(text), false, text);
+    assert.equal(core.route({text}).action, "default", text);
+  }
+  for (const text of ["$ git status\nOn branch main", "root@host:~# git status\nOn branch main", "PS C:\\work> git status\nOn branch main"]) {
+    assert.equal(core.isArtifact(text), true, text);
+  }
+});
+
 test("frequency identity trims surrounding whitespace and promotes the sixth normalized copy", () => {
   let store = new FrequencyStore();
   const variants = ["dfosaij", "dfosaij ", " dfosaij", " dfosaij ", "dfosaij"];

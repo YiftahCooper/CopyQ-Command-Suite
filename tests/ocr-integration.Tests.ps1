@@ -93,4 +93,35 @@ Describe 'CopyQ bilingual OCR dependency' {
         $result.StdOut | Should Match 'HELLO'
         $result.StdOut | Should Match '[א-ת]'
     }
+
+    It 'runs the exported CopyQ command when Tesseract is installed but absent from PATH' {
+        Import-Module (Join-Path $PSScriptRoot '../modules/CopyQ.Setup.psm1') -Force
+        $session='cqoc-'+[guid]::NewGuid().ToString('N').Substring(0,8)
+        $priorPath=$env:PATH; $priorSettings=$env:COPYQ_SETTINGS_PATH; $priorItems=$env:COPYQ_ITEM_DATA_PATH
+        $env:COPYQ_SETTINGS_PATH=Join-Path $FixtureRoot 'settings'
+        $env:COPYQ_ITEM_DATA_PATH=Join-Path $FixtureRoot 'items'
+        $context=New-CopyQSetupContext -Root (Split-Path $PSScriptRoot) -Session $session -StateRoot (Join-Path $FixtureRoot 'state')
+        $env:PATH=''
+        $server=$null
+        try {
+            $server=Start-Process $context.Executable -ArgumentList @('-s',$session) -WindowStyle Hidden -PassThru
+            Start-Sleep -Milliseconds 500
+            $png=[Convert]::ToBase64String([IO.File]::ReadAllBytes($MixedFixture))
+            $ini=[Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $PSScriptRoot '../commands/individual/copy-text-in-image.ini')))
+            # Run native selection/data handling and execute(), intercepting ONLY
+            # the final clipboard write so acceptance never changes the user's clipboard.
+            $program="setData('image/png',fromBase64('$png'));var source=importCommands(str(fromBase64('$ini')))[0].cmd.replace(/^copyq:\s*/, '');" + @'
+if(source.indexOf('copy(mimeText, text);')<0)throw Error('OCR_CLIPBOARD_BOUNDARY_MISSING');
+source=source.replace('copy(mimeText, text);', "settings('ocr_test_result', text);");
+eval(source);
+str(settings('ocr_test_result'));
+'@
+            $result=Invoke-CopyQSetupProcess $context @('eval','-') $program -TimeoutSeconds 5
+            $result | Should Match 'HELLO'
+            $result | Should Match '[א-ת]'
+        } finally {
+            if($server){try{Invoke-CopyQSetupProcess $context @('exit') | Out-Null}finally{[void]$server.WaitForExit(5000)}}
+            $env:PATH=$priorPath; $env:COPYQ_SETTINGS_PATH=$priorSettings; $env:COPYQ_ITEM_DATA_PATH=$priorItems
+        }
+    }
 }

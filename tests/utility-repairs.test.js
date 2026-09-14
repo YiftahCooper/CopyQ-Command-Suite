@@ -128,6 +128,17 @@ test("Translate to English calls the private helper and copies only its result",
   assert.doesNotMatch(translate.cmd, /translate\.google|open\(/i);
 });
 
+test("recognizable Python definitions receive syntax colours even when generic guessing chooses scdoc", () => {
+  const cmd = command("canonical.pygments-highlight").cmd;
+  const python = /var script = '([^']+)'/.exec(cmd)[1].replace(/\\n/g, "\n");
+  const input = 'def copyq_check(name):\n    message = "This deliberately long line checks that highlighted code wraps inside the CopyQ window instead of extending beyond its visible edge and becoming difficult to read."\n    print(f"Hello, {name}!")\n    return message\n\ncopyq_check("world")';
+  const launcher = pythonLauncher();
+  const result = spawnSync(launcher.file, launcher.prefix.concat(["-c", python]), {input, encoding:"utf8"});
+  assert.equal(result.status, 0, result.stderr);
+  const colours = [...result.stdout.matchAll(/<font color="(#[0-9A-Fa-f]+)">/g)].map(m => m[1]);
+  assert.ok(new Set(colours).size >= 3, "Python keywords, strings and names must not all be monochrome");
+});
+
 test("all canonical commands are free of machine-local and checkout paths", () => {
   const serialized = JSON.stringify(buildCandidate());
   assert.doesNotMatch(serialized, /[A-Z]:\\\\Users\\\\/i);

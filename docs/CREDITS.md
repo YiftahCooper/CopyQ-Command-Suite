@@ -51,3 +51,7 @@ Clipboard Router is the renamed Canonical Dispatcher, not a new donor command. S
 ## Moonlander companion project
 
 The three Moonlander CopyQ wrappers integrate with [YiftahCooper/Moonlander-Custom-Config](https://github.com/YiftahCooper/Moonlander-Custom-Config). That repository supplies the clipboard transaction scripts, transformations, installer, and reselection executable; none of those runtime files are duplicated here.
+
+## Setup tooling
+
+The setup assistant is original suite code using [PowerShell](https://github.com/PowerShell/PowerShell), [.NET Windows Forms](https://github.com/dotnet/winforms), .NET ZIP APIs, and CopyQ's native command import/export interfaces. These tools are dependencies, not republished source. [WinGet](https://github.com/microsoft/winget-cli) is linked as an optional independent package manager; the assistant does not bundle it or invoke software installation automatically. The existing translation helper is reused, not replaced by a new credential store.

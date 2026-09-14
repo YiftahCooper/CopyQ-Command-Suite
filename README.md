@@ -6,6 +6,21 @@ The repository distributes eighteen original or independently rewritten commands
 
 ## Quick start
 
+For a guided Windows setup, extract the complete package and open **CopyQ-Setup.cmd**
+as your normal user with CopyQ 16.0.0 already running. The PowerShell 7.2+ wizard
+lets you select commands, load/save a nonsecret profile, resolve shortcuts,
+preview changes, install with a command-only rollback backup, and verify the
+installed definitions. It does not download dependencies or back up clipboard
+history. See the [setup and recovery guide](docs/SETUP.md). No Node.js or Pester
+is required to use the wizard or prebuilt imports.
+
+You can also open `CopyQ-Setup.cmd` directly from a complete repository checkout.
+To update without Azure, read the installed selection and uncheck **Translate to
+English** before previewing. Unchecked commands stay unchanged; translation is
+optional and does not block installation of the other tools.
+
+Manual installation remains available:
+
 1. Install CopyQ 16.
 2. Download an individual command from the [command catalogue](docs/commands/COMMANDS.md), or choose a bundle:
    - [`commands/bundles/canonical.ini`](commands/bundles/canonical.ini) — fifteen general-purpose commands.
@@ -91,6 +106,13 @@ The [full catalogue](docs/commands/COMMANDS.md) explains activation, dependencie
 | Moonlander commands | [Moonlander Custom Config](https://github.com/YiftahCooper/Moonlander-Custom-Config) |
 
 `Test-Dependencies.ps1` is read-only. It reports what is available but never installs packages, changes `PATH`, requests elevation, or reads an Azure key.
+
+OCR is entirely local and does not require Azure. It finds Tesseract in its
+standard Program Files location or an existing executable in `PATH`. Select a
+PNG and run **Copy Text in Image**, then paste into a text editor: the image stays
+in history while recognized text replaces the clipboard. Code highlighting uses
+an explicit Python lexer for recognizable Python declarations and language
+guessing for other snippets; ambiguous snippets can still be misidentified.
 
 ## Azure translation setup
 
