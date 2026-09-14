@@ -6,18 +6,32 @@
     "moonlander": "https://github.com/YiftahCooper/Moonlander-Custom-Config"
   },
   "bundles": [
-    { "group": "canonical", "output": "commands/bundles/canonical.ini", "count": 15 },
-    { "group": "moonlander", "output": "commands/bundles/moonlander.ini", "count": 3 },
-    { "group": "all", "output": "commands/bundles/all.ini", "count": 18 }
+    {
+      "group": "canonical",
+      "output": "commands/bundles/canonical.ini",
+      "count": 15
+    },
+    {
+      "group": "moonlander",
+      "output": "commands/bundles/moonlander.ini",
+      "count": 3
+    },
+    {
+      "group": "all",
+      "output": "commands/bundles/all.ini",
+      "count": 18
+    }
   ],
   "commands": [
     {
       "identity": "canonical.dispatcher",
-      "name": "Canonical Dispatcher",
+      "name": "Clipboard Router",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/clipboard-router.js",
       "output": "commands/individual/canonical-dispatcher.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
       "inspiredBy": [
         "https://github.com/hluk/copyq-commands/blob/master/commands/big-data-tab.ini",
@@ -29,144 +43,208 @@
       "identity": "canonical.undoable-delete-listener",
       "name": "Move to Trash (Undoable)",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/move-to-trash.js",
       "output": "commands/individual/move-to-trash-undoable.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/undoable-move-to-trash.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/undoable-move-to-trash.ini"
+      ]
     },
     {
       "identity": "canonical.undo-delete",
       "name": "Undo Delete",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/undo-delete.js",
       "output": "commands/individual/undo-delete.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
       "shortcut": "ctrl+z",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/undoable-move-to-trash.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/undoable-move-to-trash.ini"
+      ]
     },
     {
       "identity": "canonical.html-sanitizer",
       "name": "Remove Background and Text Colors",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/sanitize-html.js",
       "output": "commands/individual/remove-background-and-text-colors.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/remove-background-and-text-colors.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/remove-background-and-text-colors.ini"
+      ]
     },
     {
       "identity": "canonical.translate-en",
       "name": "Translate to English",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/translate.js",
       "output": "commands/individual/translate-to-english.ini",
-      "dependencies": ["CopyQ 16", "PowerShell 7", "Azure Translator"],
+      "dependencies": [
+        "CopyQ 16",
+        "PowerShell 7",
+        "Azure Translator"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/translate-to-english.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/translate-to-english.ini"
+      ]
     },
     {
       "identity": "canonical.markdown-render",
       "name": "Render Markdown",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/render-markdown.js",
       "output": "commands/individual/render-markdown.ini",
-      "dependencies": ["CopyQ 16", "marked"],
+      "dependencies": [
+        "CopyQ 16",
+        "marked"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/render-markdown.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/render-markdown.ini"
+      ]
     },
     {
       "identity": "canonical.pygments-highlight",
       "name": "Highlight Code",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/highlight-code.js",
       "output": "commands/individual/highlight-code.ini",
-      "dependencies": ["CopyQ 16", "Python 3", "Pygments"],
+      "dependencies": [
+        "CopyQ 16",
+        "Python 3",
+        "Pygments"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/highlight-code.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/highlight-code.ini"
+      ]
     },
     {
       "identity": "canonical.ocr",
       "name": "Copy Text in Image",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/ocr.js",
       "output": "commands/individual/copy-text-in-image.ini",
-      "dependencies": ["CopyQ 16", "Tesseract OCR", "Tesseract eng", "Tesseract heb"],
+      "dependencies": [
+        "CopyQ 16",
+        "Tesseract OCR",
+        "Tesseract eng",
+        "Tesseract heb"
+      ],
       "provenance": "independent-rewrite",
       "shortcut": "meta+ctrl+t",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/copy-text-in-image.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/copy-text-in-image.ini"
+      ]
     },
     {
       "identity": "canonical.copy-json",
       "name": "Copy Items as JSON",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/copy-json.js",
       "output": "commands/individual/copy-items-as-json.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/copy-paste-items-as-json.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/copy-paste-items-as-json.ini"
+      ]
     },
     {
       "identity": "canonical.paste-json",
       "name": "Paste Items from JSON",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/paste-json.js",
       "output": "commands/individual/paste-items-from-json.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/copy-paste-items-as-json.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/copy-paste-items-as-json.ini"
+      ]
     },
     {
       "identity": "canonical.regex-search",
       "name": "Search All Tabs",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/regex-search.js",
       "output": "commands/individual/search-all-tabs.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/search-all-tabs.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/search-all-tabs.ini"
+      ]
     },
     {
       "identity": "canonical.smart-title",
       "name": "To Title Case",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/title-case.js",
       "output": "commands/individual/to-title-case.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/to-title-case.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/to-title-case.ini"
+      ]
     },
     {
       "identity": "canonical.toggle-case",
       "name": "Toggle Upper/Lower Case",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/toggle-case.js",
       "output": "commands/individual/toggle-upper-lower-case.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/toggle-upper-lower-case-of-selected-text.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/toggle-upper-lower-case-of-selected-text.ini"
+      ]
     },
     {
       "identity": "canonical.show-frequent",
       "name": "Show Frequent",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/show-frequent.js",
       "output": "commands/individual/show-frequent.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
       "shortcut": "meta+shift+f",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/frequent-items-tab.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/frequent-items-tab.ini"
+      ]
     },
     {
       "identity": "canonical.copy-and-search",
       "name": "Copy and Search on Web",
       "group": "canonical",
-      "source": "src/commands.js",
+      "source": "src/runtime/web-search.js",
       "output": "commands/individual/copy-and-search-on-web.ini",
-      "dependencies": ["CopyQ 16"],
+      "dependencies": [
+        "CopyQ 16"
+      ],
       "provenance": "independent-rewrite",
-      "inspiredBy": ["https://github.com/hluk/copyq-commands/blob/master/commands/copy-and-search-on-web.ini"]
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/copy-and-search-on-web.ini"
+      ]
     },
     {
       "identity": "moonlander.smart-title",
@@ -174,7 +252,10 @@
       "group": "moonlander",
       "source": "src/moonlander-commands.js",
       "output": "commands/individual/moonlander-smart-title-case.ini",
-      "dependencies": ["CopyQ 16", "Moonlander Custom Config"],
+      "dependencies": [
+        "CopyQ 16",
+        "Moonlander Custom Config"
+      ],
       "provenance": "original",
       "shortcut": "F13",
       "companion": "moonlander"
@@ -185,7 +266,10 @@
       "group": "moonlander",
       "source": "src/moonlander-commands.js",
       "output": "commands/individual/moonlander-cycle-case.ini",
-      "dependencies": ["CopyQ 16", "Moonlander Custom Config"],
+      "dependencies": [
+        "CopyQ 16",
+        "Moonlander Custom Config"
+      ],
       "provenance": "original",
       "shortcut": "F19",
       "companion": "moonlander"
@@ -196,24 +280,99 @@
       "group": "moonlander",
       "source": "src/moonlander-commands.js",
       "output": "commands/individual/moonlander-transplant-hebrew-english.ini",
-      "dependencies": ["CopyQ 16", "Moonlander Custom Config"],
+      "dependencies": [
+        "CopyQ 16",
+        "Moonlander Custom Config"
+      ],
       "provenance": "original",
       "shortcut": "F22",
       "companion": "moonlander"
     }
   ],
   "referenceOnly": [
-    { "name": "Render HTML", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/render-html.ini", "contributors": ["hluk"] },
-    { "name": "Search & Replace", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/search-and-replace.ini", "contributors": ["hluk"] },
-    { "name": "Edit and Paste", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/edit-and-paste.ini", "contributors": ["hluk"] },
-    { "name": "Preview Image Files", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/preview-image-files.ini", "contributors": ["hluk", "GFDGIT"] },
-    { "name": "Image Tab", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/image-tab.ini", "contributors": ["hluk"] },
-    { "name": "Tab for URLs with Title and Icon", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/tab-for-urls-with-title-and-icon.ini", "contributors": ["hluk", "metafaniel"] },
-    { "name": "Copy URL (web address) to other tab", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/tab-for-urls-with-title-and-icon.ini", "contributors": ["hluk", "metafaniel"] },
-    { "name": "Tab Key to Select Next/Previous", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/tab-key-select.ini", "contributors": ["hluk"] },
-    { "name": "Edit Files", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/edit-files.ini", "contributors": ["beefeater7", "hluk"] },
-    { "name": "Linkify", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/linkify.ini", "contributors": ["hluk"] },
-    { "name": "Snippets", "url": "https://github.com/hluk/copyq-commands/blob/master/commands/snippets.ini", "contributors": ["hluk", "m4r71n", "pbodnar"] }
+    {
+      "name": "Render HTML",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/render-html.ini",
+      "contributors": [
+        "hluk"
+      ]
+    },
+    {
+      "name": "Search & Replace",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/search-and-replace.ini",
+      "contributors": [
+        "hluk"
+      ]
+    },
+    {
+      "name": "Edit and Paste",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/edit-and-paste.ini",
+      "contributors": [
+        "hluk"
+      ]
+    },
+    {
+      "name": "Preview Image Files",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/preview-image-files.ini",
+      "contributors": [
+        "hluk",
+        "GFDGIT"
+      ]
+    },
+    {
+      "name": "Image Tab",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/image-tab.ini",
+      "contributors": [
+        "hluk"
+      ]
+    },
+    {
+      "name": "Tab for URLs with Title and Icon",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/tab-for-urls-with-title-and-icon.ini",
+      "contributors": [
+        "hluk",
+        "metafaniel"
+      ]
+    },
+    {
+      "name": "Copy URL (web address) to other tab",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/tab-for-urls-with-title-and-icon.ini",
+      "contributors": [
+        "hluk",
+        "metafaniel"
+      ]
+    },
+    {
+      "name": "Tab Key to Select Next/Previous",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/tab-key-select.ini",
+      "contributors": [
+        "hluk"
+      ]
+    },
+    {
+      "name": "Edit Files",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/edit-files.ini",
+      "contributors": [
+        "beefeater7",
+        "hluk"
+      ]
+    },
+    {
+      "name": "Linkify",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/linkify.ini",
+      "contributors": [
+        "hluk"
+      ]
+    },
+    {
+      "name": "Snippets",
+      "url": "https://github.com/hluk/copyq-commands/blob/master/commands/snippets.ini",
+      "contributors": [
+        "hluk",
+        "m4r71n",
+        "pbodnar"
+      ]
+    }
   ],
   "copyqDefaults": [
     "Pin",
@@ -242,7 +401,6 @@
     "src/routing.js",
     "src/runtime.js",
     "src/secrets.js",
-    "src/shared-core.js",
     "src/moonlander-commands.js",
     "src/public-commands.js",
     "scripts/Build-PublicCommands.ps1",
@@ -282,6 +440,61 @@
     "commands/individual/moonlander-transplant-hebrew-english.ini",
     "commands/bundles/canonical.ini",
     "commands/bundles/moonlander.ini",
-    "commands/bundles/all.ini"
+    "commands/bundles/all.ini",
+    "src/bundle-core.js",
+    "src/core/common.js",
+    "src/core/urls.js",
+    "src/core/secrets.js",
+    "src/core/artifacts.js",
+    "src/core/code.js",
+    "src/core/markdown.js",
+    "src/core/frequency.js",
+    "src/core/trash.js",
+    "src/core/routing.js",
+    "src/core/casing.js",
+    "src/core/html.js",
+    "src/core/json.js",
+    "src/core/regex.js",
+    "src/core/dependencies.js",
+    "src/runtime/clipboard-router.js",
+    "src/runtime/move-to-trash.js",
+    "src/runtime/undo-delete.js",
+    "src/runtime/sanitize-html.js",
+    "src/runtime/translate.js",
+    "src/runtime/render-markdown.js",
+    "src/runtime/highlight-code.js",
+    "src/runtime/ocr.js",
+    "src/runtime/copy-json.js",
+    "src/runtime/paste-json.js",
+    "src/runtime/regex-search.js",
+    "src/runtime/title-case.js",
+    "src/runtime/toggle-case.js",
+    "src/runtime/show-frequent.js",
+    "src/runtime/web-search.js",
+    "src/runtime/command-source.js",
+    "src/runtime/secret-protection-fragment.js",
+    "src/runtime/secret-protection.js",
+    "tests/modular-commands.test.js",
+    "commands/alternatives/secret-protection.ini",
+    "docs/ARCHITECTURE.md"
+  ],
+  "alternatives": [
+    {
+      "identity": "canonical.secret-protection",
+      "name": "Secret Protection (Standalone)",
+      "group": "alternative",
+      "source": "src/runtime/secret-protection.js",
+      "output": "commands/alternatives/secret-protection.ini",
+      "dependencies": [
+        "CopyQ 16"
+      ],
+      "provenance": "independent-rewrite",
+      "conflictsWith": [
+        "canonical.dispatcher"
+      ],
+      "inspiredBy": [
+        "https://github.com/hluk/copyq-commands/blob/master/commands/ignore-passwords-tokens.ini"
+      ]
+    }
   ]
 }

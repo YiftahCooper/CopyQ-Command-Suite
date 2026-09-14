@@ -1,0 +1,8 @@
+"use strict";
+
+
+function titleCase(text) { var words = String(text).toLowerCase().split(/(\s+)/); var minor = { a: 1, an: 1, the: 1, and: 1, but: 1, or: 1, for: 1, nor: 1, as: 1, at: 1, by: 1, from: 1, in: 1, into: 1, near: 1, of: 1, on: 1, onto: 1, to: 1, with: 1 }; var first = -1; var last = -1; var i; for (i = 0; i < words.length; i += 1) if (!/^\s+$/.test(words[i])) { if (first < 0) first = i; last = i; } for (i = 0; i < words.length; i += 1) if (!/^\s+$/.test(words[i])) { if (i !== first && i !== last && minor[words[i]]) continue; words[i] = words[i].charAt(0).toUpperCase() + words[i].slice(1); } return words.join('').replace(/\bId\b/g, 'ID').replace(/\bTv\b/g, 'TV'); }
+function toggleCase(value) { var text = String(value == null ? '' : value); var i; var character; for (i = 0; i < text.length; i += 1) { character = text.charAt(i); if (character !== character.toUpperCase() && character === character.toLowerCase()) return text.toUpperCase(); } return text.toLowerCase(); }
+
+module.exports = { titleCase: titleCase, toggleCase: toggleCase };
+

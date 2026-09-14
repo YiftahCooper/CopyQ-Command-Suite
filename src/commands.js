@@ -10,7 +10,7 @@ function command(internalId, name, cmd, options) {
 
 function buildCandidate() {
   return { schema: 2, commands: [
-    command("canonical.dispatcher", "Canonical Dispatcher", runtime.dispatcherBody(), { automatic: true, inMenu: false, display: false, input: "" }),
+    command("canonical.dispatcher", "Clipboard Router", runtime.dispatcherBody(), { automatic: true, inMenu: false, display: false, input: "" }),
     command("canonical.undoable-delete-listener", "Move to Trash (Undoable)", runtime.undoableDeleteListenerBody(), { isScript: true, inMenu: false }),
     command("canonical.undo-delete", "Undo Delete", runtime.undoDeleteBody(), { shortcuts: ["ctrl+z"] }),
     command("canonical.html-sanitizer", "Remove Background and Text Colors", runtime.htmlSanitizerBody(), { automatic: true, input: "text/html" }),
@@ -34,4 +34,8 @@ function stableStringify(value) {
   return JSON.stringify(value);
 }
 
-module.exports = { buildCandidate, stableStringify };
+function buildSecretProtection() {
+  return command("canonical.secret-protection", "Secret Protection (Standalone)", require("./runtime/secret-protection")(), { automatic: true, inMenu: false, input: "" });
+}
+
+module.exports = { buildCandidate, buildSecretProtection, stableStringify };

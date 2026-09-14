@@ -1,5 +1,5 @@
 "use strict";
-const core = require("./core-node");
+const core = require("./core/frequency");
 function FrequencyStore(state, maxEntries) { state = state || {}; this.maxEntries = maxEntries || 4096; this.state = { version: 3, counters: state.version === 2 ? {} : (state.counters || {}), clock: state.version === 2 ? 0 : (state.clock || 0) }; this.v2 = state.v2 || (state.version === 2 ? state : { version: 2, counters: {}, clock: 0 }); this.legacy = state.frequent_usage_counts || {}; }
 FrequencyStore.prototype.next = function (state) { var store = new FrequencyStore({ version: 3, counters: state.counters, clock: state.clock, v2: this.v2, frequent_usage_counts: this.legacy }, this.maxEntries); store.prune(); return store; };
 FrequencyStore.prototype.record = function (text) { var result = core.recordFrequency(this.state, this.v2, this.legacy, text); return { store: this.next(result.state), count: result.result.count, promote: result.result.promote, hashes: result.result.hashes, key: result.result.key, canonicalText: result.result.canonicalText }; };

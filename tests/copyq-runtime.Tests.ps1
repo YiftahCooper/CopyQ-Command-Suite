@@ -140,6 +140,14 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
         Invoke-IsolatedEval "tab('(trash)');String(size())" | Should Be '0'
     }
 
+    It 'keeps removal-hook helpers isolated from narrow command modules' {
+        $probe = Invoke-IsolatedEval "var command=commands().filter(function(c){return c.internalId==='canonical.regex-search';})[0];var body=command.cmd.replace(/^copyq:\s*/,'');var core=body.substring(0,body.indexOf('var query = dialog'));eval(core);if(typeof CopyQCore.validateRegex!=='function'||typeof CopyQCore.isTrashExpired!=='undefined')throw new Error('PROBE_NOT_NARROW');tab('(trash)');var old={};old[mimeText]='scope probe expired';old['application/x-copyq-trash-deleted-at']='2000-01-01T00:00:00.000Z';insert(0,old);tab('Module Isolation');insert(0,'module isolation deletion');remove(0);tab('(trash)');JSON.stringify({text:str(read(mimeText,0)),source:str(read('application/x-copyq-trash-source-tab',0))})" | ConvertFrom-Json
+        $probe.text | Should Be 'module isolation deletion'
+        $probe.source | Should Be 'Module Isolation'
+        Invoke-IsolatedEval "String(ItemSelection('(trash)').select(/^scope probe expired$/,mimeText).length)" | Should Be '0'
+        Invoke-IsolatedEval "tab('(trash)');remove(0);'CLEAN'" | Should Be 'CLEAN'
+    }
+
     It 'prunes expired trash lazily before recording a new batch' {
         Invoke-IsolatedEval "tab('(trash)');var old={};old[mimeText]='expired';old['application/x-copyq-trash-source-tab']='Old';old['application/x-copyq-trash-source-row']='0';old['application/x-copyq-trash-batch']='old';old['application/x-copyq-trash-deleted-at']='2000-01-01T00:00:00.000Z';insert(0,old);tab('Cleanup Test');insert(0,'fresh deletion');remove(0);'DONE'" | Should Be 'DONE'
         $trash = Invoke-IsolatedEval "tab('(trash)');JSON.stringify({count:size(),text:str(read(mimeText,0))})" | ConvertFrom-Json
@@ -243,6 +251,35 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
             Invoke-IsolatedEval "tab('Safe Later Copy');String(Object.keys(getItem(0)).indexOf(mimeHtml))" | Should Be '-1'
         } finally {
             Invoke-IsolatedEval "setCommands(commands().filter(function(c){return c.name!=='Test Safe Later Copy';}));'RESTORED'" | Out-Null
+        }
+    }
+
+    It 'runs standalone protection without routing or frequency indexing and rejects conflicting installs' {
+        $root = Split-Path -Parent $PSScriptRoot
+        $alternative = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([IO.File]::ReadAllText((Join-Path $root 'commands\alternatives\secret-protection.ini'))))
+        # Native export preserves CopyQ RegExp fields; JSON stringification does not.
+        $baseline = Invoke-IsolatedEval 'exportCommands(commands())'
+        $baselineEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($baseline))
+        try {
+            Invoke-IsolatedEval "setCommands(importCommands(str(fromBase64('$alternative'))));'READY'" | Should Be 'READY'
+            foreach ($sample in @('https://example.test/standalone', 'const plain = 1;', 'ordinary text')) {
+                $sampleEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($sample))
+                $result = Invoke-IsolatedEval "var before=settings('frequent_usage_counts_v3');setData(mimeText,fromBase64('$sampleEncoded'));setData(mimeOutputTab,'Standalone Test');var accepted=runAutomaticCommands();if(accepted)saveData();tab('Standalone Test');JSON.stringify({text:str(read(mimeText,0)),destination:str(data(mimeOutputTab)),sameFrequency:before===settings('frequent_usage_counts_v3')})" | ConvertFrom-Json
+                $result.text | Should Be $sample
+                $result.destination | Should Be 'Standalone Test'
+                $result.sameFrequency | Should Be $true
+            }
+            Invoke-IsolatedEval "setData(mimeText,'Use ghp_' + Array(37).join('a'));setData(mimeHtml,'alternate credential');setData(mimeOutputTab,'Standalone Test');if(runAutomaticCommands())saveData();tab('Standalone Test');str(read(mimeText,0))" | Should Be 'Use [REDACTED]'
+            Invoke-IsolatedEval "tab('Standalone Test');String(Object.keys(getItem(0)).indexOf(mimeHtml))" | Should Be '-1'
+            Invoke-IsolatedEval "setData(mimeText,'ghp_'+Array(37).join('b'));String(runAutomaticCommands())" | Should Be 'false'
+            Invoke-IsolatedEval "setData('Clipboard Viewer Ignore','1');String(runAutomaticCommands())" | Should Be 'false'
+            Invoke-IsolatedEval "setCommands(importCommands(str(fromBase64('$baselineEncoded'))).concat(importCommands(str(fromBase64('$alternative')))));'CONFLICT'" | Should Be 'CONFLICT'
+            $conflict = Invoke-IsolatedEval "var before=settings('frequent_usage_counts_v3');setData(mimeText,'ordinary conflict test');setData(mimeOutputTab,'Conflict Must Stay Empty');var accepted=runAutomaticCommands();if(accepted)saveData();JSON.stringify({accepted:accepted,sameFrequency:before===settings('frequent_usage_counts_v3'),tabExists:tab().indexOf('Conflict Must Stay Empty')>=0})" | ConvertFrom-Json
+            $conflict.accepted | Should Be $false
+            $conflict.sameFrequency | Should Be $true
+            $conflict.tabExists | Should Be $false
+        } finally {
+            Invoke-IsolatedEval "setCommands(importCommands(str(fromBase64('$baselineEncoded'))));'RESTORED'" | Out-Null
         }
     }
 

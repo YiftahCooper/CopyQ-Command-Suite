@@ -2,7 +2,7 @@
 
 A curated Windows command collection for [CopyQ](https://github.com/hluk/CopyQ) 16. It combines privacy-aware clipboard routing, automatic Markdown rendering, OCR, code highlighting, translation, text utilities, and optional Moonlander selected-text commands.
 
-The repository distributes eighteen original or independently rewritten commands. Community commands used in the author's personal setup are credited and linked, but their source is not republished here.
+The repository distributes eighteen original or independently rewritten commands, plus an optional protection-only alternative. Community commands used in the author's personal setup are credited and linked, but their source is not republished here.
 
 ## Quick start
 
@@ -11,21 +11,35 @@ The repository distributes eighteen original or independently rewritten commands
    - [`commands/bundles/canonical.ini`](commands/bundles/canonical.ini) — fifteen general-purpose commands.
    - [`commands/bundles/moonlander.ini`](commands/bundles/moonlander.ini) — three Moonlander integrations.
    - [`commands/bundles/all.ini`](commands/bundles/all.ini) — all eighteen commands.
-3. Open CopyQ, press `F6`, choose **Load Commands**, select the INI, review the command list, and confirm.
+3. Open CopyQ, press `F6`, choose **Load Commands**, select the downloaded INI (not a saved GitHub HTML page), review the command list, and confirm. For undoable deletion, import both **Move to Trash (Undoable)** and **Undo Delete**, then exit and restart CopyQ so the listener loads.
 4. Run the optional dependency report when using rendering, highlighting, OCR, translation, or Moonlander features:
 
    ```powershell
    pwsh -NoProfile -File .\scripts\Test-Dependencies.ps1
    ```
 
-Importing a command file does not install external programs and does not change CopyQ clipboard history or tabs.
+Importing a command file does not install external programs or migrate existing history. Once enabled, automatic commands can route new copies, and the undo listener can prune expired `(trash)` entries. Existing CopyQ settings are retained; the suite does not set your item limit, encryption or autostart preferences.
 
-Put **Canonical Dispatcher first in the command list**, ahead of all automatic commands, including community image and URL handlers. Importing a replacement can append it at the bottom: move it back to the top before applying. Earlier commands can store or fetch data before a later `ignore()` call.
+Put **Clipboard Router first in the command list**, ahead of all automatic commands, including community image and URL handlers. Importing a replacement can append it at the bottom: move it back to the top before applying. Earlier commands can store or fetch data before a later `ignore()` call.
+
+**Clipboard Router is the new display name for Canonical Dispatcher.** It retains the same internal identity and import filename. Replace the old command; do not keep both.
+
+### Only want secret protection?
+
+Import [`commands/alternatives/secret-protection.ini`](commands/alternatives/secret-protection.ini) instead of Clipboard Router. **Secret Protection (Standalone)** provides the same exclusion/redaction behaviour, but does not route items to tabs or count copies. Put it first, followed by whichever other commands you use.
+
+Do not enable it alongside Clipboard Router/Canonical Dispatcher. An enabled duplicate or conflicting handler stops processing with `SECRET_HANDLER_CONFLICT` until the extra handler is removed. This optional alternative is deliberately excluded from all three standard bundles.
+
+### Modular source, self-contained imports
+
+Each suite command now has its own source file under `src/runtime/`. Secret detection, URL rules, artifact detection, routing, frequency state and utility helpers have separate implementations under `src/core/`. Generated commands embed only their required modules: title case no longer includes secret detection, for example. See [source architecture and contribution guide](docs/ARCHITECTURE.md).
+
+This source refactor does not require you to reinstall a working setup. To adopt a newer generated command, replace that command alone. Do not import a full bundle over an existing installation.
 
 ### Updating an existing setup: secret redaction and URL routing
 
 1. In `F6`, select all current commands and save a command backup outside the checkout.
-2. Replace only **Canonical Dispatcher** with `commands/individual/canonical-dispatcher.ini` and move it to the top. Leave its Format field empty so concealment metadata is checked even without plain text.
+2. Replace only **Canonical Dispatcher / Clipboard Router** with `commands/individual/canonical-dispatcher.ini` and move it to the top. Leave its Format field empty so concealment metadata is checked even without plain text.
 3. Disable **Copy URL (web address) to other tab** if it targets `&web`. The dispatcher now routes standalone HTTP(S), FTP(S), and file URLs into `&URLs` without requiring an HTML response or a network connection.
 4. If retaining **Tab for URLs with Title and Icon**, keep it after the dispatcher and set its Content filter to `^https?://\S+$`. It is optional enrichment, not the storage gate. That upstream command fetches copied addresses and can log URLs; disable it if automatic fetching is unwanted.
 5. Apply once. Existing history is not migrated or deleted by this update. Keep the old `web` tab until its unique items are safely preserved; blindly combining two full tabs can exceed CopyQ's item limit. Do not bulk-copy known credentials into `URLs`.
@@ -56,7 +70,7 @@ For a harmless acceptance test, copy `Please use ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaa
 
 | Area | Commands |
 |---|---|
-| Clipboard automation | Canonical Dispatcher; Move to Trash (Undoable); Undo Delete; Remove Background and Text Colors |
+| Clipboard automation | Clipboard Router; Move to Trash (Undoable); Undo Delete; Remove Background and Text Colors |
 | Rendering and extraction | Render Markdown; Highlight Code; Copy Text in Image |
 | Translation | Translate to English |
 | Data and search | Copy Items as JSON; Paste Items from JSON; Search All Tabs; Copy and Search on Web |
@@ -102,13 +116,13 @@ If those keys are already assigned to other CopyQ commands, resolve the collisio
 
 ## Privacy and failure behaviour
 
-- Canonical Dispatcher excludes standalone secrets (`SECRET_IGNORED`) and permanently redacts recognized credentials in mixed text (`SECRET_REDACTED`) before saving it. Notifications contain reason codes, not copied content.
+- Clipboard Router excludes standalone secrets (`SECRET_IGNORED`) and permanently redacts recognized credentials in mixed text (`SECRET_REDACTED`) before saving it. Notifications contain reason codes, not copied content.
 - Secret checks precede image/owner passthrough, and a notification failure cannot skip suppression. Private Google Calendar ICS capability links are sensitive URLs; public feeds, normal addresses, and local/file URLs are not automatically secrets.
 - Detection is heuristic: unfamiliar, unlabeled or encoded secrets can still escape it, and explicit credential-like labels can produce false positives. This is not encryption, a guaranteed secret detector, or retroactive cleanup of old history, trash, exports or backups. If rewriting the history payload fails, the item is excluded and `SECRET_REDACTION_FAILED` is reported.
 - Substantial JSON, command blocks, transcripts, logs, stack traces, diffs, and configuration blocks route to `Artifacts`; short commands, standalone paths, `git status`, and ordinary prose stay in the normal history.
 - Eligible text from normal history, `&URLs`, `BIG`, `Artifacts`, and `Code` is counted independently of its primary tab. On copy six, a trimmed text-only copy is added to `Frequent`; the primary item remains where it belongs.
 - Frequency state stores at most 4,096 dual-hash counters and recency values, not copied text. Leading and trailing whitespace do not create separate counters.
-- Deletion moves complete items into `(trash)` for up to 30 days and `Ctrl+Z` in the CopyQ window restores the newest removal batch. Delete sensitive material from `(trash)` as well when immediate permanent removal is required.
+- Deletion moves complete items into `(trash)` and `Ctrl+Z` in the CopyQ window restores the newest removal batch. Entries at least 30 days old are pruned at startup and before another deletion, not by a timer; they can remain longer while CopyQ is idle. Trash also inherits your configured tab item limit (110 in the author's setup), which can evict entries sooner. Delete sensitive material from `(trash)` as well when immediate permanent removal is required.
 - Markdown, highlighting, and OCR run locally.
 - Azure receives only text explicitly sent through Translate to English.
 - Missing tools leave the current clipboard item intact and report bounded codes such as `MARKDOWN_FAILED`, `PYGMENTS_FAILED`, `OCR_FAILED`, or `TRANSLATE_NOT_CONFIGURED`.
@@ -116,15 +130,19 @@ If those keys are already assigned to other CopyQ commands, resolve the collisio
 
 ## Build and test
 
-The committed INI files are generated from the canonical JavaScript command model through one isolated CopyQ 16 session:
+Building is optional: normal users can import the committed INIs. To build and test, use Windows, a normal-user **PowerShell 7** session in the repository root, Node.js with npm, Git for Windows, and **CopyQ 16.0.0**. The exporter deliberately requires that exact CopyQ version for repeatable output. Verification for this refactor used Node 24 and Pester **3.4.0**; the Pester 5 assertion syntax is not interchangeable. Install or make Pester 3.4.0 available before running the test block. OCR/Pygments tests also require the dependencies listed above; Azure tests use synthetic credentials and mocked HTTP responses, not a live subscription.
+
+The committed INI files are generated from the JavaScript command model through one isolated CopyQ session. Run each step only if the preceding step succeeds:
 
 ```powershell
 npm test
 npm run build
-Invoke-Pester .\tests -Verbose
+Import-Module Pester -RequiredVersion 3.4.0
+$copyqTests = Invoke-Pester .\tests -PassThru
+if ($copyqTests.FailedCount) { throw 'CopyQ tests failed' }
 ```
 
-The PowerShell tests use syntax compatible with the Pester 3.4 module bundled on this Windows machine. The build creates eighteen individual files and the three bundles, imports every result back into the isolated session, and never connects to or modifies the normal CopyQ session.
+Expect zero failures. The build creates eighteen integrated individual exports, one standalone protection alternative, and three bundles; it imports every result back into the isolated session and never connects to or modifies the normal CopyQ session. Tests use disposable settings and item storage. A failed test is a stop condition, not permission to activate the candidate; after correcting its cause, rerun the failed test step. Rebuilding rewrites generated INIs and is safe to repeat; it does not install commands into your live setup.
 
 ## Community commands
 

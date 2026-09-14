@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Split core features and individual runtime command bodies into focused source files. Generated imports embed only their dependency closure; remove the shared implementation monolith without new runtime dependencies.
+- Rename Canonical Dispatcher to Clipboard Router while preserving its stable identity and import filename. Preserve the integrated 18-command inventory and Moonlander exports.
+- Add optional Secret Protection (Standalone), excluded from normal bundles, with conflict detection against the integrated router. Document feature boundaries and native command backups.
 - Permanently redact recognized credentials inside newly copied documents while leaving the current Windows clipboard unchanged for immediate original paste. History/menu paste uses only the redacted version, without a hidden original or new shortcut.
 - Remove original alternate MIME representations from redacted history items, exclude them from frequency counting, and test that trash/undo and later automatic commands cannot recover the original secret.
 - Preserve ordinary URL IDs and paths; redact only recognizable credential components. Document heuristic limits, formatting loss, and the separate Windows clipboard-history boundary.

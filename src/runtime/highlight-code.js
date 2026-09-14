@@ -1,0 +1,8 @@
+"use strict";
+
+const { copyq, script } = require("./command-source");
+
+function pygmentsBody() { return copyq(["var text = data(mimeText); if (!text) abort();", "var script = 'import re\\nimport sys\\nfrom pygments import highlight\\nfrom pygments.lexers import guess_lexer\\nfrom pygments.formatters import HtmlFormatter\\ncode = sys.stdin.read()\\nquote = chr(34)\\nfragment = highlight(code, guess_lexer(code), HtmlFormatter(noclasses=True, nowrap=True, style=\"xcode\"))\\npattern = \"<span style=\" + quote + \"color: (#[0-9A-Fa-f]{3,6})\" + quote + \">\"\\nfragment = re.sub(pattern, lambda match: \"<font color=\" + quote + match.group(1) + quote + \">\", fragment).replace(\"</span>\", \"</font>\")\\nstyle = \"font-family: Consolas; font-size: 14px; white-space: pre-wrap; margin-top: 0px; margin-bottom: 0px;\"\\nhtml = \"<table width=\" + quote + \"100%\" + quote + \" border=\" + quote + \"0\" + quote + \" cellspacing=\" + quote + \"0\" + quote + \" cellpadding=\" + quote + \"8\" + quote + \" bgcolor=\" + quote + \"#ffffff\" + quote + \"><tr><td bgcolor=\" + quote + \"#ffffff\" + quote + \"><pre style=\" + quote + style + quote + \">\" + fragment + \"</pre></td></tr></table>\"\\nsys.stdout.write(html)';", "var result = null; try { result = execute('py.exe', '-3', '-c', script, null, text); } catch (e) {} if (!result || result.exit_code !== 0) { try { result = execute('python.exe', '-c', script, null, text); } catch (e2) {} } if (!result || result.exit_code !== 0) { notification('.id', 'pygments', '.title', 'Highlight Code', '.message', 'PYGMENTS_FAILED'); abort(); } setData(mimeHtml, result.stdout);"], []); }
+
+module.exports = pygmentsBody;
+

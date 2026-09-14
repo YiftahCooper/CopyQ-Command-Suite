@@ -62,6 +62,7 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($modelJson)) {
 }
 $model = $modelJson | ConvertFrom-Json
 if (@($model.commands).Count -ne 18) { throw 'PUBLIC_COMMAND_COUNT_INVALID' }
+if (@($model.alternatives).Count -ne 1) { throw 'PUBLIC_ALTERNATIVE_COUNT_INVALID' }
 
 $session = 'cqpub-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
 $privateRoot = [IO.Path]::GetFullPath((Join-Path $env:TEMP $session))
@@ -87,7 +88,7 @@ try {
     if (-not $ready) { throw 'ISOLATED_COPYQ_NOT_READY' }
 
     $outputs = @()
-    foreach ($command in $manifest.commands) {
+    foreach ($command in (@($manifest.commands) + @($manifest.alternatives))) {
         $outputs += [pscustomobject]@{
             Path = [string] $command.output
             Identities = @([string] $command.identity)
@@ -105,7 +106,7 @@ try {
 
     foreach ($output in $outputs) {
         $identitiesJson = ConvertTo-Json -InputObject @($output.Identities) -Compress
-        $exportProgram = "var model=$modelJson;var ids=$identitiesJson;var selected=model.commands.filter(function(command){return ids.indexOf(command.internalId)>=0;});exportCommands(selected)"
+        $exportProgram = "var model=$modelJson;var ids=$identitiesJson;var selected=model.commands.concat(model.alternatives).filter(function(command){return ids.indexOf(command.internalId)>=0;});exportCommands(selected)"
         $export = Invoke-CopyQProcess -FilePath $copyq -ArgumentList @('-s', $session, 'eval', '-') -StandardInput $exportProgram
         if ($export.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($export.StdOut)) {
             throw "COMMAND_EXPORT_FAILED: $($output.Path)"
@@ -130,6 +131,7 @@ try {
 
     [pscustomobject]@{
         Individual = @($manifest.commands).Count
+        Alternatives = @($manifest.alternatives).Count
         Canonical = @($manifest.commands | Where-Object group -eq 'canonical').Count
         Moonlander = @($manifest.commands | Where-Object group -eq 'moonlander').Count
         All = @($manifest.commands).Count

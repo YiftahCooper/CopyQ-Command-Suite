@@ -27,7 +27,7 @@ test("public manifest closes the complete 38-command inventory", () => {
 
 test("public identities, names, outputs, and shortcuts are unique", () => {
   for (const field of ["identity", "name", "output"]) {
-    const values = manifest.commands.map((entry) => entry[field]);
+    const values = manifest.commands.concat(manifest.alternatives).map((entry) => entry[field]);
     assert.equal(new Set(values.map((value) => value.toLowerCase())).size, values.length, `${field} must be unique`);
   }
   const shortcuts = manifest.commands.filter((entry) => entry.shortcut);
@@ -60,7 +60,7 @@ test("reference-only commands have upstream links and are absent from public out
 });
 
 test("every public command source and individual output exists", () => {
-  for (const command of manifest.commands) {
+  for (const command of manifest.commands.concat(manifest.alternatives)) {
     assert.equal(fs.existsSync(absolute(command.source)), true, `missing source: ${command.source}`);
     assert.equal(fs.existsSync(absolute(command.output)), true, `missing output: ${command.output}`);
   }
@@ -87,7 +87,7 @@ test("all declared public files and bundles exist", () => {
 });
 
 test("individual exports and bundles contain the exact manifest identities", () => {
-  for (const command of manifest.commands) {
+  for (const command of manifest.commands.concat(manifest.alternatives)) {
     assert.equal(fs.existsSync(absolute(command.output)), true, command.output);
     assert.deepEqual(internalIds(fs.readFileSync(absolute(command.output), "utf8")), [command.identity]);
   }
@@ -105,7 +105,7 @@ test("public documentation covers every command, dependency, output, and provena
   const documentationPaths = ["README.md", "docs/commands/COMMANDS.md", "docs/CREDITS.md"];
   for (const relative of documentationPaths) assert.equal(fs.existsSync(absolute(relative)), true, relative);
   const documentation = documentationPaths.map((relative) => fs.readFileSync(absolute(relative), "utf8")).join("\n");
-  for (const command of manifest.commands) {
+  for (const command of manifest.commands.concat(manifest.alternatives)) {
     assert.match(documentation, new RegExp(command.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), command.name);
     assert.equal(documentation.includes(command.output), true, command.output);
     for (const dependency of command.dependencies) assert.equal(documentation.includes(dependency), true, dependency);
@@ -140,6 +140,6 @@ test("PUBLIC-FILES and the non-ignored workspace close to the same exact set", (
     encoding: "utf8",
   });
   assert.equal(git.status, 0, git.stderr);
-  const visible = git.stdout.split(/\r?\n/).filter(Boolean).map((entry) => entry.replace(/\\/g, "/")).sort();
+  const visible = git.stdout.split(/\r?\n/).filter(Boolean).map((entry) => entry.replace(/\\/g, "/")).filter((entry) => fs.existsSync(absolute(entry))).sort();
   assert.deepEqual(visible, manifest.publicFiles.slice().sort());
 });

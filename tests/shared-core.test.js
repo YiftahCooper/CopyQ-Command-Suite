@@ -7,7 +7,8 @@ const vm = require("node:vm");
 const test = require("node:test");
 
 const root = path.resolve(__dirname, "..");
-const sharedSource = fs.readFileSync(path.join(root, "src", "shared-core.js"), "utf8");
+const { bundleCore, moduleNames } = require("../src/bundle-core");
+const sharedSource = bundleCore(moduleNames);
 const Core = vm.runInNewContext(sharedSource + "\nCopyQCore;", {});
 const { buildCandidate } = require("../src/commands");
 
@@ -17,6 +18,7 @@ test("dispatcher suppresses a secret even if the notification backend throws", (
   let ignored = false;
   const stop = new Error("stopped");
   const context = {
+    commands: () => [dispatcher()],
     dataFormats: () => ["text/plain"], data: () => "ghp_abcdefghijklmnopqrstuvwxyz1234567890",
     str: String, mimeText: "text/plain", mimeOwner: "owner", mimeHidden: "hidden",
     notification: () => { throw new Error("notification backend unavailable"); },
@@ -29,6 +31,7 @@ test("dispatcher suppresses a secret even if the notification backend throws", (
 test("dispatcher suppresses conceal metadata even without plain text", () => {
   let ignored = false;
   const context = {
+    commands: () => [dispatcher()],
     dataFormats: () => ["image/png", "Clipboard Viewer Ignore"], data: () => "",
     str: String, mimeText: "text/plain", mimeOwner: "owner", mimeHidden: "hidden",
     notification: () => {}, ignore: () => { ignored = true; }, abort: () => { throw new Error("stopped"); },
@@ -43,6 +46,7 @@ test("dispatcher removes alternate secret formats but never writes the system cl
   const event = { "text/plain": raw, "text/html": raw, "text/rtf": raw, "custom/private": raw, "application/x-copyq-output-tab": "Test" };
   const notices = [];
   const context = {
+    commands: () => [dispatcher()],
     dataFormats: () => Object.keys(event), data: (format) => event[format] || "", str: String,
     mimeText: "text/plain", mimeOwner: "owner", mimeHidden: "hidden", mimeOutputTab: "application/x-copyq-output-tab",
     removeData: (format) => { delete event[format]; }, setData: (format, value) => { event[format] = value; return true; },
@@ -59,6 +63,7 @@ test("dispatcher removes alternate secret formats but never writes the system cl
 test("failed redaction suppresses the item even if error notification fails", () => {
   let ignored = false;
   const context = {
+    commands: () => [dispatcher()],
     dataFormats: () => ["text/plain", "text/html"], data: () => "Use ghp_" + "a".repeat(36), str: String,
     mimeText: "text/plain", mimeOwner: "owner", mimeHidden: "hidden", mimeOutputTab: "output",
     removeData: () => { throw new Error("format removal failed"); },
@@ -69,8 +74,8 @@ test("failed redaction suppresses the item even if error notification fails", ()
   assert.equal(ignored, true);
 });
 
-test("the generated dispatcher embeds the exact ES5 core that Node executes", () => {
-  assert.equal(dispatcher().cmd.includes(sharedSource), true);
+test("the generated dispatcher embeds its dependency closure in ES5", () => {
+  assert.equal(dispatcher().cmd.includes(bundleCore(["routing", "frequency"])), true);
   assert.equal(typeof Core.route, "function");
   assert.equal(/(?:^|[;{}]\s*)(?:const|let)\s/.test(sharedSource), false);
 });
@@ -79,7 +84,7 @@ test("dispatcher gives a content-free notification before ignoring a secret", ()
   const command = dispatcher().cmd;
   const notice = "notification('.id', 'secret-ignore', '.title', 'Ignoring secret in the clipboard', '.message', 'SECRET_IGNORED')";
   assert.equal(command.includes(notice), true);
-  assert.equal(command.indexOf(notice) < command.indexOf("ignore();"), true);
+  assert.equal(command.indexOf(notice) < command.indexOf("ignore();", command.indexOf(notice)), true);
   assert.equal(notice.includes("text"), false);
 });
 

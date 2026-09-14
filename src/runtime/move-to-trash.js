@@ -1,0 +1,19 @@
+"use strict";
+
+const { copyq, script } = require("./command-source");
+
+function undoableDeleteListenerBody() {
+  return script([
+    "var onItemsRemoved_ = global.onItemsRemoved || function () {};",
+    "var TRASH_TAB = '(trash)'; var V3_KEY = 'frequent_usage_counts_v3'; var INTERNAL_REMOVE_KEY = 'copyq_undo_internal_remove'; var SOURCE_TAB_MIME = 'application/x-copyq-trash-source-tab'; var SOURCE_ROW_MIME = 'application/x-copyq-trash-source-row'; var BATCH_MIME = 'application/x-copyq-trash-batch'; var DELETED_AT_MIME = 'application/x-copyq-trash-deleted-at'; var FREQ_KEY_MIME = 'application/x-copyq-user-frequency-key'; var FREQ_COUNT_MIME = 'application/x-copyq-user-frequency-count'; var RESTORE_BATCH_MIME = 'application/x-copyq-undo-restore-batch'; var RETENTION_MS = 30 * 24 * 60 * 60 * 1000;",
+    "function settingsObject(key, fallback) { try { var value = settings(key); return value ? JSON.parse(value) : fallback; } catch (e) { return fallback; } }",
+    "function hasTab(name) { var names = tab(); for (var i = 0; i < names.length; i += 1) if (names[i] === name) return true; return false; }",
+    "function cleanupTrash() { if (!hasTab(TRASH_TAB)) return; var originalTab = selectedTab(); var expired = []; tab(TRASH_TAB); var now = new Date().getTime(); for (var i = 0; i < size(); i += 1) if (CopyQCore.isTrashExpired(str(read(DELETED_AT_MIME, i)), now, RETENTION_MS)) expired.unshift(i); if (expired.length) remove.apply(this, expired); tab(originalTab); }",
+    "function isInternalRemoval() { var markerData = settings(INTERNAL_REMOVE_KEY); if (!markerData) return false; var marker = str(markerData); var items = ItemSelection().current().items(); if (!items.length) return false; for (var i = 0; i < items.length; i += 1) if (str(items[i][BATCH_MIME]) !== marker && str(items[i][RESTORE_BATCH_MIME]) !== marker) return false; return true; }",
+    "global.onItemsRemoved = function () { var sourceTab = selectedTab(); if (isInternalRemoval()) return; if (sourceTab === TRASH_TAB) return onItemsRemoved_(); var selected = ItemSelection().selectRemovable(); var outsideCurrent = ItemSelection().current().invert(); selected.deselectSelection(outsideCurrent); if (!selected.length) return onItemsRemoved_(); var rows = selected.rows(); var items = selected.items(); cleanupTrash(); var batch = String(new Date().getTime()) + ':' + String(Math.floor(Math.random() * 1000000000)); var deletedAt = new Date().toISOString(); var oldStateValue = settings(V3_KEY); var state = settingsObject(V3_KEY, { version: 3, counters: {}, clock: 0 }); for (var i = 0; i < items.length; i += 1) { var item = items[i]; item[SOURCE_TAB_MIME] = sourceTab; item[SOURCE_ROW_MIME] = String(rows[i]); item[BATCH_MIME] = batch; item[DELETED_AT_MIME] = deletedAt; if (sourceTab === 'Frequent') { var key = str(item[FREQ_KEY_MIME]); if (!key) key = CopyQCore.hashesFor(str(item[mimeText])).key; var metadataCount = Number(str(item[FREQ_COUNT_MIME]) || 0); var dismissed = CopyQCore.dismissFrequency(state, key); state = dismissed.state; item[FREQ_KEY_MIME] = key; item[FREQ_COUNT_MIME] = String(dismissed.savedCount || metadataCount); } } settings(V3_KEY, JSON.stringify(state)); try { tab(TRASH_TAB); write(0, items); tab(sourceTab); onItemsRemoved_(); } catch (error) { settings(INTERNAL_REMOVE_KEY, batch); try { var escapedBatch = batch.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'); var written = ItemSelection(TRASH_TAB).select(new RegExp('^' + escapedBatch + '$'), BATCH_MIME); if (written.length) { tab(TRASH_TAB); remove.apply(this, written.rows()); } } catch (removeError) {} settings(INTERNAL_REMOVE_KEY, ''); settings(V3_KEY, oldStateValue || ''); tab(sourceTab); throw error; } };",
+    "settings(INTERNAL_REMOVE_KEY, ''); cleanupTrash();",
+  ], ["frequency","trash"]);
+}
+
+module.exports = undoableDeleteListenerBody;
+
