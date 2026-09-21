@@ -82,6 +82,12 @@ function New-CopyQSetupWizard([string] $Root, $InitialProfile) {
     }.GetNewClosure()
     $connect={if (-not $ui.Context) {$ui.Context=New-CopyQSetupContext -Root $Root};return $ui.Context}.GetNewClosure()
     $actions=[ordered]@{}
+    $actions['Uncheck all']={
+        [void]$grid.EndEdit()
+        foreach ($row in $grid.Rows) {$row.Cells[0].Value=$false}
+        $ui.Preview=$null
+        $status.Text='All commands unchecked. Shortcut edits are retained. Check only the commands you want to install or update; unchecked installed commands stay untouched.'
+    }.GetNewClosure()
     $actions['Essentials']={& $showProfile (New-CopyQSetupProfile)}.GetNewClosure()
     $actions['All general tools']={& $showProfile (New-CopyQSetupProfile -Commands @($package.Catalog.id | Where-Object {$_ -like 'canonical.*' -and $_ -ne 'canonical.secret-protection'}))}.GetNewClosure()
     $actions['Protection only']={& $showProfile (New-CopyQSetupProfile -Commands @('canonical.secret-protection'))}.GetNewClosure()

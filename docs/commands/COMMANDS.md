@@ -6,6 +6,12 @@ Each file below is a separate import through CopyQ's command dialog (`F6` → **
 
 ### Clipboard Router (formerly Canonical Dispatcher)
 
+**The combined automatic history organiser: secret protection + tab sorting +
+Frequent indexing.** It runs when you copy, not when you select a menu action.
+"Router" refers to choosing a CopyQ tab, not a network connection. Install this
+for the integrated workflow; do not also install Secret Protection (Standalone).
+Rendering, OCR, translation and Moonlander remain separate commands.
+
 - Download: [commands/individual/canonical-dispatcher.ini](../../commands/individual/canonical-dispatcher.ini)
 - Activation: first automatic command, with an empty Format filter, on clipboard changes.
 - Behaviour: checks secrets and concealment metadata before image/owner/hidden passthrough; routes text of at least 5,000 characters to `BIG`, standalone HTTP(S)/FTP(S)/file URLs to `&URLs`, strong technical blocks to `Artifacts`, and detected source code to `Code`. Every eligible text copy is counted independently of that primary destination. URL storage works without fetching the address or requiring HTML.
@@ -16,7 +22,13 @@ Each file below is a separate import through CopyQ's command dialog (`F6` → **
 
 `Artifacts` requires a strong signal: a JSON object/array with at least two entries, a structured multiline PowerShell or shell command, a command transcript, multiple timestamped or level-prefixed log lines, a stack trace/backtrace, a unified diff, or a configuration block with at least three entries. A standalone path, `git status`, a one-line PowerShell command, a short identifier, an ordinary URL, normal prose, and normal Markdown prose stay outside `Artifacts`. Bare `#` headings and `>` quotations do not count as shell prompts; transcripts need an unambiguous prompt such as `$`, `PS C:\work>`, or `user@host:~#`.
 
+Standalone guessing is limited to 10–150 characters with no whitespace and at least two of lowercase letters, uppercase letters and digits, with existing structured-value exceptions. Bare 32–128-character hexadecimal values remain excluded. JSON objects and arrays bypass only the generic whole-item guess, not embedded credential detection or password-manager concealment metadata. Recognized credentials longer than 150 characters remain protected. This policy deliberately accepts false positives for ambiguous standalone values while preserving ordinary document hashes and identifiers.
+
 ### Secret Protection (Standalone) — optional alternative
+
+**Secret filtering only, for users who do not want Clipboard Router.** It uses
+the same protection rules; it is neither an extra layer nor a missing dependency
+of the router. It leaves tab organisation and frequency features to other tools.
 
 - Download: [commands/alternatives/secret-protection.ini](../../commands/alternatives/secret-protection.ini) (not in the standard bundles).
 - Activation: first automatic command, with an empty Format filter. Use **instead of**, not alongside, Clipboard Router or Canonical Dispatcher.

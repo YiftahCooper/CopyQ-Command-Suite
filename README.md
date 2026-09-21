@@ -4,6 +4,47 @@ A curated Windows command collection for [CopyQ](https://github.com/hluk/CopyQ) 
 
 The repository distributes eighteen original or independently rewritten commands, plus an optional protection-only alternative. Community commands used in the author's personal setup are credited and linked, but their source is not republished here.
 
+## Clipboard Router or Secret Protection (Standalone)?
+
+**For the suite's automatic sorting and Frequent index, choose Clipboard Router.
+It already includes secret protection. You do not need both commands.**
+
+Clipboard Router is an automatic command that decides what happens to each new
+copy **in CopyQ history**. "Router" means sorting copied text into the appropriate
+tab; it has nothing to do with a network router. It combines three jobs:
+
+1. **Protect history:** exclude detected standalone secrets and redact recognized
+   secrets inside documents, while leaving immediate ordinary paste unchanged.
+2. **Sort text:** send URLs, code, substantial technical artifacts and large text
+   to their appropriate tabs; leave ordinary text in the normal clipboard tab.
+3. **Build a Frequent index:** count eligible copies and add a secondary entry in
+   `Frequent` after six copies, without taking it out of its primary destination.
+
+**Secret Protection (Standalone)** is the same first job packaged on its own. It
+is for someone who wants secret filtering but wants to keep their existing tab
+organisation, or does not want the suite's automatic sorting and copy counting.
+"Standalone" means it works without Clipboard Router, not that it adds another
+layer of protection to it.
+
+| Feature | Clipboard Router | Secret Protection (Standalone) |
+|---|---|---|
+| Exclude detected standalone secrets from history | Yes | Yes, same rules |
+| Redact recognized secrets inside saved documents | Yes | Yes, same rules |
+| Leave the current clipboard unchanged for immediate paste | Yes | Yes |
+| Sort eligible text into URLs, Code, Artifacts and BIG tabs | Yes | No; other commands may still sort it |
+| Count copies and maintain the Frequent index | Yes | No |
+| Included in the general-purpose and complete bundles | Yes | No; optional alternative |
+
+Both run automatically when you copy; neither is a command you must invoke for
+each item. Enable **one**, and put it first among automatic commands. Enabling
+both causes `SECRET_HANDLER_CONFLICT`, not stronger protection. Leaving the
+standalone option unchecked when the router is installed is therefore correct.
+
+Neither command includes OCR, translation, Markdown rendering, code highlighting,
+undoable deletion or Moonlander transformations: those are separate commands you
+can choose independently, subject to their documented dependencies. Secret
+detection remains heuristic; neither option guarantees that every secret is found.
+
 ## Quick start
 
 For a guided Windows setup, extract the complete package and open **CopyQ-Setup.cmd**
@@ -15,6 +56,10 @@ history. See the [setup and recovery guide](docs/SETUP.md). No Node.js or Pester
 is required to use the wizard or prebuilt imports.
 
 You can also open `CopyQ-Setup.cmd` directly from a complete repository checkout.
+For one-command updates, click **Uncheck all**, then select only the command you
+want. Shortcut edits remain intact. **Read installed selection** is optional and
+also recognizes the three original Moonlander wrappers without suite IDs; it
+does not modify them. Installation changes only the selected commands.
 To update without Azure, read the installed selection and uncheck **Translate to
 English** before previewing. Unchecked commands stay unchanged; translation is
 optional and does not block installation of the other tools.
@@ -39,7 +84,7 @@ Put **Clipboard Router first in the command list**, ahead of all automatic comma
 
 **Clipboard Router is the new display name for Canonical Dispatcher.** It retains the same internal identity and import filename. Replace the old command; do not keep both.
 
-### Only want secret protection?
+### Installing the protection-only alternative
 
 Import [`commands/alternatives/secret-protection.ini`](commands/alternatives/secret-protection.ini) instead of Clipboard Router. **Secret Protection (Standalone)** provides the same exclusion/redaction behaviour, but does not route items to tabs or count copies. Put it first, followed by whichever other commands you use.
 
@@ -74,6 +119,8 @@ For newly copied text containing a recognized embedded credential:
 Selecting the saved item is also the way to share the redacted version immediately. It replaces the current clipboard with that safe history item. There is no new shortcut, vault, timeout, or recover-original command. The original can remain on the current Windows clipboard until something replaces it; this feature does not securely erase process memory or control Windows clipboard history/cloud sync, other clipboard tools, or the source application.
 
 Whole standalone keys and password-manager concealment metadata continue to be **excluded** from history, with `SECRET_IGNORED`. Mixed documents instead receive `SECRET_REDACTED`. Recognized embedded forms include supported provider-prefixed tokens, structurally valid JWTs, private-key PEM blocks, authorization headers, and explicit password/token/secret/API-key assignments. Generic mixed-case words and unlabeled hashes inside documents are not guessed to be secrets.
+
+Generic standalone-password guessing applies only to 10–150 characters without whitespace and with at least two of lowercase letters, uppercase letters and digits, subject to the existing URL/path/UUID/version exceptions. Bare hexadecimal strings of 32–128 characters are also excluded: this intentionally favours protection over retaining an ambiguous standalone checksum. Valid JSON objects and arrays are not treated as one password, even when compact; their contents are still scanned for recognized embedded credentials. The 150-character cap does not disable recognition of longer provider tokens, private keys or explicitly labelled credentials. Unchanged documents produce no secret notification; `SECRET_REDACTED` reports a replacement, not a guarantee that every possible secret was found.
 
 Ordinary URLs remain intact, including random-looking paths, IDs, and query values. Exceptions are recognizable credential forms: a password in URL user information, explicitly named `access_token`, `api_key`/`apikey`/`api-key`, `password`, `secret`, or `token` parameters, and private Google Calendar ICS feed tokens. Only the credential component is replaced. A redacted credential URL is for reference/sharing and may no longer work.
 

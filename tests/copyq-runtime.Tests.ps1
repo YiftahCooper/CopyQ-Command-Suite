@@ -231,6 +231,28 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
         Invoke-IsolatedEval "String(tab().indexOf('URL Fallback Test'))" | Should Be '-1'
     }
 
+    It 'stores compact JSON intact while preserving standalone and embedded secret protection' {
+        $cases = @(
+            @{Text='{"level":"INFO","count":1}'; Accepted=$true; Stored='{"level":"INFO","count":1}'; Destination='Artifacts'},
+            @{Text='[{"result":"SYNC_COMPLETE","revision":"r20260921"},1]'; Accepted=$true; Stored='[{"result":"SYNC_COMPLETE","revision":"r20260921"},1]'; Destination='Artifacts'},
+            @{Text=('Z9' + ('q' * 148)); Accepted=$false},
+            @{Text=('Z9' + ('q' * 149)); Accepted=$true; Stored=('Z9' + ('q' * 149)); Destination='Password Boundary Test'},
+            @{Text=('sk-' + ('q' * 180)); Accepted=$false},
+            @{Text='{"password":"ExamplePass123!","ok":true}'; Accepted=$true; Stored='{"password":"[REDACTED]","ok":true}'; Destination='Artifacts'}
+        )
+        foreach ($case in $cases) {
+            $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($case.Text))
+            $result = Invoke-IsolatedEval "setData(mimeText,fromBase64('$encoded'));setData(mimeOutputTab,'Password Boundary Test');var accepted=runAutomaticCommands();var destination=str(data(mimeOutputTab));var stored=null;if(accepted){saveData();tab(destination);stored=str(read(mimeText,0));}JSON.stringify({accepted:accepted,destination:destination,stored:stored})" | ConvertFrom-Json
+            $result.accepted | Should Be $case.Accepted
+            if ($case.Accepted) {
+                $result.destination | Should Be $case.Destination
+                $result.stored | Should Be $case.Stored
+            } else {
+                $result.stored | Should BeNullOrEmpty
+            }
+        }
+    }
+
     It 'stores only redacted MIME data and undo cannot recover the original secret' {
         $result = Invoke-IsolatedEval "var raw='Use ghp_' + Array(37).join('a') + ' for this request';var prior=settings('frequent_usage_counts_v3');setData(mimeText,raw);setData(mimeHtml,'<b>'+raw+'</b>');setData('text/rtf',raw);setData('application/x-private-test',raw);setData(mimeOutputTab,'Redaction Test');var accepted=runAutomaticCommands();if(accepted)saveData();tab('Redaction Test');var item=getItem(0);JSON.stringify({accepted:accepted,text:str(item[mimeText]),formats:Object.keys(item),frequencyUnchanged:prior===settings('frequent_usage_counts_v3'),leaked:Object.keys(item).some(function(k){return str(item[k]).indexOf('ghp_')>=0;})})" | ConvertFrom-Json
         $result.accepted | Should Be $true

@@ -54,6 +54,11 @@ dependency. Edit source files, not generated INIs.
 
 ## Why keep a combined Clipboard Router?
 
+For users, this is one automatic command combining **history protection, tab
+sorting and Frequent indexing**. "Router" describes choosing a destination tab,
+not networking. The protection-only alternative contains the first feature on
+its own, with the same detection rules; it is not an add-on to the router.
+
 The combined setup still needs one agreed order: safety, frequency eligibility,
 index updates, and primary destination. Separate source modules provide clarity
 without making users manually coordinate several competing automatic handlers.

@@ -7,8 +7,9 @@
     function native(items) { return str(exportCommands(items)).replace(/\r/g, ''); }
     function snapshot() {
         var current = commands();
-        return { native: native(current), inventory: current.map(function (c) {
-            return { id: c.internalId || '', name: c.name, automatic: !!c.automatic,
+        var identities = CopyQSetupPlan.commandIdentities(current);
+        return { native: native(current), inventory: current.map(function (c, index) {
+            return { id: identities[index], name: c.name, automatic: !!c.automatic,
                 local: c.shortcuts || [], global: c.globalShortcuts || [] };
         }) };
     }

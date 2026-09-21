@@ -84,3 +84,30 @@ test("installing both automatic handlers fails closed before routing or frequenc
     assert.match(JSON.stringify(notices), /SECRET_HANDLER_CONFLICT/);
   }
 });
+
+test("protection notifications distinguish kept JSON, excluded passwords and redacted documents", () => {
+  const command = require("../src/commands").buildSecretProtection();
+  for (const [text, expected, reason, excluded] of [
+    ['{"level":"INFO","count":1}', '{"level":"INFO","count":1}', null, false],
+    ["Z9" + "q".repeat(148), "Z9" + "q".repeat(148), "SECRET_IGNORED", true],
+    ["Z9" + "q".repeat(149), "Z9" + "q".repeat(149), null, false],
+    ['{"password":"ExamplePass123!","ok":true}', '{"password":"[REDACTED]","ok":true}', "SECRET_REDACTED", false],
+  ]) {
+    const event = { "text/plain": text, "text/html": "<pre>" + text + "</pre>" };
+    const notices = []; let ignored = false;
+    const stop = new Error("abort");
+    const context = {
+      commands: () => [command], dataFormats: () => Object.keys(event), data: (key) => event[key] || "", str: String,
+      mimeText: "text/plain", mimeOwner: "owner", mimeHidden: "hidden", mimeOutputTab: "output",
+      setData: (key, value) => { event[key] = value; return true; }, removeData: (key) => { delete event[key]; },
+      notification: (...args) => notices.push(args), ignore: () => { ignored = true; }, abort: () => { throw stop; },
+      copy: () => assert.fail("must not overwrite the immediate-paste clipboard"),
+    };
+    try { vm.runInNewContext(command.cmd.replace(/^copyq:\s*/, ""), context); } catch (error) { if (error !== stop) throw error; }
+    assert.equal(ignored, excluded);
+    assert.equal(event["text/plain"], expected);
+    assert.equal(notices.length, reason ? 1 : 0);
+    if (reason) assert.equal(notices[0].includes(reason), true);
+    if (reason === "SECRET_REDACTED") assert.equal(event["text/html"], undefined, "unredacted alternate format must be removed");
+  }
+});

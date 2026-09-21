@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Explain Clipboard Router as history protection, tab sorting and Frequent indexing, with a feature comparison against the mutually exclusive protection-only alternative. Command names and identities are unchanged.
+- Add setup's Uncheck all action without clearing shortcut edits. Recognize the original ID-less Moonlander wrappers during read-only discovery and selective update planning; refuse ambiguous duplicates and preserve unselected native commands.
+- Stop treating compact JSON objects/arrays as standalone passwords. Limit generic standalone-password guessing to 10–150 characters while retaining bare-hex, recognized long-credential, embedded-redaction and password-manager protection. Add detector, notification and isolated history-storage regressions.
 - Fix Markdown headings and quotations being mistaken for shell prompts and routed into Artifacts.
 - Prefer Python highlighting for recognizable Python declarations instead of an incorrect generic lexer guess that can produce monochrome output.
 - Resolve the installed Tesseract executable before OCR execution, avoiding CopyQ's stalled short-name launch when Tesseract is absent from PATH. Add a real exported-command regression with bilingual PNG input and PATH deliberately empty.

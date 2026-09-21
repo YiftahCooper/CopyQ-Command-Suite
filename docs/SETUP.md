@@ -5,6 +5,23 @@ It installs command definitions using CopyQ's native API. It is not an MSI,
 application upgrader, background service, package manager or clipboard backup.
 No Node.js, npm or Pester is needed to run the setup assistant.
 
+## Which protection option should I select?
+
+- **Clipboard Router** is the combined automatic command: it protects history,
+  sorts copied text into appropriate tabs, and maintains the Frequent index. Its
+  name describes tab sorting, not networking. This is the option for the suite's
+  integrated clipboard workflow.
+- **Secret Protection (Standalone)** provides the same secret filtering and
+  redaction without sorting or frequency counting. Choose it only if you want
+  protection without the router's other features. It is an alternative, not an
+  extra component needed to complete a router installation.
+- **Select one, not both.** With Clipboard Router installed, an unchecked
+  standalone-protection row is expected. Both leave immediate ordinary paste
+  unchanged; filtering applies to what CopyQ retains in history.
+
+OCR, translation, rendering and Moonlander commands are separate from either
+option. See the [feature comparison](../README.md#clipboard-router-or-secret-protection-standalone).
+
 ## Before opening it
 
 - Windows and **CopyQ 16.0.0**, running as your normal Windows user.
@@ -29,6 +46,8 @@ repository/release. There is no download-and-execute pipeline or telemetry.
 2. Choose Essentials, All general tools, Protection only, or individual checkboxes.
    Undo automatically includes its partner. Show Frequent requires the router.
    Router and standalone protection are mutually exclusive.
+   For a single-command update, click **Uncheck all**, then check only that
+   command. This clears selection, not installed commands or shortcut edits.
 3. Optionally load a saved JSON profile. Profiles from another package can be
    loaded, but preview warns that this package's commands will be used.
 4. Edit shortcuts only if needed. Blank keeps the packaged default, `-` clears
@@ -53,6 +72,11 @@ Each process input/response wait is limited to 20 seconds. Start CopyQ in the sa
 account before retrying a connection failure.
 
 ### Update other commands while leaving translation alone
+
+For a router-only update, **Uncheck all** → **Clipboard Router** → **Preview
+changes** → **Install selected** is sufficient. **Read installed selection** is
+optional; use it first if you want to retain installed shortcut customizations,
+then use **Uncheck all** without losing the loaded shortcut values.
 
 Click **Read installed selection**, then uncheck **Translate to English** before
 previewing. Alternatively, load a profile that excludes `canonical.translate-en`.
@@ -118,6 +142,13 @@ from your normal Windows account using disposable text.
 **Save profile** saves the selected suite identities, shortcut overrides, package
 digest and optional nonsecret Azure region. **Read installed selection** loads
 the suite commands and shortcuts actually present in CopyQ; then save the profile.
+The three original Moonlander wrappers without suite IDs are recognized by their
+exact names, expected F13/F19/F22 shortcuts and known wrapper code. Discovery is
+read-only: their script bodies and IDs are not rewritten. Selecting one and
+confirming installation explicitly updates that existing command to the packaged
+version rather than adding a duplicate. Leave them unchecked to preserve them.
+Modified or ambiguous legacy wrappers are not silently adopted; duplicate
+Moonlander identities stop discovery/preview with `DUPLICATE_IDENTITY`.
 Profiles do not contain command bodies, API keys, clipboard items or arbitrary
 application preferences. They cannot reproduce unrelated community commands or
 custom script edits. Identities not present in the current package are

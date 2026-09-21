@@ -60,6 +60,39 @@ Describe 'Setup native installation and command-only recovery' {
         if ($script:setupServer) { [void]$setupServer.WaitForExit(5000) }
         $env:COPYQ_SETTINGS_PATH=$script:oldSettings; $env:COPYQ_ITEM_DATA_PATH=$script:oldItems
     }
+    It 'discovers legacy Moonlander read-only, updates one without duplicates and restores its native definition' {
+        $original=Get-CopyQSetupSnapshot $setupContext
+        try {
+            $fixture=@'
+var cs=commands();
+[['Smart Title Case','smartTitleCase','F13','{}'],['Cycle Case','cycleCase','F19','{reselect: true}'],['Transplant Hebrew-English','transplantHebrewEnglish','F22','{}']].forEach(function(x){
+ cs.push({name:'Moonlander: '+x[0],globalShortcuts:[x[2]],isGlobalShortcut:true,cmd:"copyq:\nsource('D:/Tools/MoonlanderTextTools/transformations.js');\nsource('D:/Tools/MoonlanderTextTools/transaction.js');\nMoonlanderTransaction.runTransaction(MoonlanderTransforms."+x[1]+", "+x[3]+", MoonlanderTransaction.createCopyQAdapter('D:/Tools/MoonlanderTextTools/Moonlander.Reselect.exe'));"});
+});setCommands(cs);
+'@
+            Invoke-CopyQSetupProcess $setupContext @('eval','-') $fixture | Out-Null
+            $before=Get-CopyQSetupSnapshot $setupContext
+            $profile=Export-CopyQSetupProfile $setupContext
+            ($profile.commands -join ';') | Should Be 'moonlander.smart-title;moonlander.cycle-case;moonlander.hebrew-layout'
+            $profile.shortcuts['moonlander.smart-title'].global | Should Be @('F13')
+            ((Get-CopyQSetupSnapshot $setupContext).native -ceq $before.native) | Should Be $true
+            Invoke-CopyQSetupProcess $setupContext @('eval',"String(commands().filter(function(c){return /^Moonlander:/.test(c.name)&&!!c.internalId;}).length)") | Should Be '0'
+            $single=New-CopyQSetupProfile -Commands @('moonlander.smart-title')
+            $preview=Get-CopyQSetupPreview $setupContext $single
+            $preview.added.Count | Should Be 0
+            $preview.updated | Should Be @('moonlander.smart-title')
+            $preview.preserved | Should Be ($before.inventory.Count-1)
+            $after=Invoke-CopyQSetupBridge $setupContext @{action='apply';expected=$preview.before;candidate=$preview.candidate}
+            $after.inventory.Count | Should Be $before.inventory.Count
+            @($after.inventory | Where-Object id -eq 'moonlander.smart-title').Count | Should Be 1
+            Invoke-CopyQSetupProcess $setupContext @('eval',"String(commands().filter(function(c){return /^Moonlander:/.test(c.name)&&!c.internalId;}).length)") | Should Be '2'
+            (Get-CopyQSetupPreview $setupContext $single).unchanged | Should Be @('moonlander.smart-title')
+            $restored=Invoke-CopyQSetupBridge $setupContext @{action='apply';expected=$after.native;candidate=$before.native}
+            ($restored.native -ceq $before.native) | Should Be $true
+        } finally {
+            $now=Get-CopyQSetupSnapshot $setupContext
+            Invoke-CopyQSetupBridge $setupContext @{action='apply';expected=$now.native;candidate=$original.native} | Out-Null
+        }
+    }
     It 'installs selection, reads it back, repeats safely and restores exact native commands' {
         $profile = New-CopyQSetupProfile -Commands @('canonical.dispatcher','canonical.undo-delete')
         $before = Get-CopyQSetupSnapshot $setupContext

@@ -10,6 +10,53 @@ const { isCode, routeContent } = require("../src/routing");
 const { FrequencyStore, hashesFor, v2HashesFor, legacyKiloHash } = require("../src/frequency");
 const core = require("../src/core-node");
 
+test("compact JSON containers are not mistaken for standalone passwords", () => {
+  const documents = [
+    { level: "INFO", count: 1 },
+    [{ result: "SYNC_COMPLETE", revision: "r20260921" }],
+    { component: "example_worker", code: "SYNC_COMPLETE", entries: Array.from({ length: 30 }, (_, i) => ({ id: "record-" + i, status: "DONE" })) },
+    { id: "a1b2".repeat(16) },
+  ];
+  for (const value of documents) {
+    for (const text of [JSON.stringify(value), JSON.stringify(value, null, 2)]) {
+      assert.equal(isHighConfidenceSecret(text), false);
+      const result = core.route({ text });
+      assert.notEqual(result.action, "ignored");
+      assert.equal(result.redactedText, undefined);
+      assert.equal(result.frequencyEligible, true);
+    }
+  }
+});
+
+test("generic standalone password guessing includes 150 characters but stops at 151", () => {
+  for (const [length, ignored] of [[9, false], [10, true], [128, true], [150, true], [151, false], [3000, false]]) {
+    const text = "Z9" + "q".repeat(length - 2);
+    assert.equal(core.route({ text }).action === "ignored", ignored, "length " + length);
+  }
+  assert.equal(core.route({ text: "a1b2".repeat(16) }).action, "ignored", "bare ambiguous hex remains protected");
+});
+
+test("JSON exemption does not bypass embedded secrets or password-manager metadata", () => {
+  const key = "ghp_" + "a".repeat(36);
+  for (const [text, expected] of [
+    [JSON.stringify({ password: "ExamplePass123!", ok: true }), '{"password":"[REDACTED]","ok":true}'],
+    [JSON.stringify([key, "SYNC_COMPLETE"]), '["[REDACTED]","SYNC_COMPLETE"]'],
+  ]) {
+    const result = core.route({ text });
+    assert.equal(result.action, "artifacts");
+    assert.equal(result.redactedText, expected);
+    assert.equal(result.frequencyEligible, false);
+  }
+  assert.equal(core.route({ text: '{"level":"INFO","count":1}', formats: ["Clipboard Viewer Ignore"] }).action, "ignored");
+});
+
+test("explicit long credentials are protected independently of the generic length cap", () => {
+  const key = "sk-" + "q".repeat(180);
+  assert.equal(core.route({ text: key }).action, "ignored");
+  assert.equal(core.route({ text: "Request uses " + key }).redactedText, "Request uses [REDACTED]");
+  assert.equal(core.route({ text: "API_KEY=" + "q".repeat(180) }).action, "ignored");
+});
+
 test("redacts recognizable embedded secrets without guessing at ordinary prose and URL identifiers", () => {
   const token = "ghp_" + "a".repeat(36);
   const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.signature";

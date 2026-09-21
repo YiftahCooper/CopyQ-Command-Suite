@@ -29,6 +29,29 @@ Describe 'Setup wizard construction' {
         $profile=New-CopyQSetupProfile -Commands @('canonical.smart-title','canonical.no-longer-available')
         {New-CopyQSetupWizard -Root $root -InitialProfile $profile} | Should Throw 'UNKNOWN_COMMAND'
     }
+    It 'unchecks all commands without clearing shortcut edits' {
+        $root=Split-Path -Parent $PSScriptRoot
+        Get-Module CopyQ.Setup -All | Remove-Module -Force
+        Import-Module (Join-Path $root 'modules/CopyQ.Setup.psm1') -Force
+        . (Join-Path $root 'scripts/setup/wizard.ps1')
+        $view=New-CopyQSetupWizard $root
+        try {
+            $row=$view.Grid.Rows | Where-Object Tag -eq 'canonical.smart-title'
+            $row.Cells[0].Value=$true
+            $row.Cells[2].Value='Ctrl+Shift+T'
+            $row.Cells[3].Value='-'
+            $button=$view.Form.Controls[0].Controls[2].Controls | Where-Object Text -eq 'Uncheck all'
+            ($null -ne $button) | Should Be $true
+            foreach ($repeat in 1..2) {
+                [void]$button.GetType().GetMethod('OnClick',[Reflection.BindingFlags]'Instance,NonPublic').Invoke($button,@([EventArgs]::Empty))
+                @($view.Grid.Rows | Where-Object {$_.Cells[0].Value}).Count | Should Be 0
+                $row.Cells[2].Value | Should Be 'Ctrl+Shift+T'
+                $row.Cells[3].Value | Should Be '-'
+            }
+            $row.Cells[0].Value=$true
+            @($view.Grid.Rows | Where-Object {$_.Cells[0].Value}).Count | Should Be 1
+        } finally {$view.Form.Dispose()}
+    }
     It 'previews the installed selection without collapsing empty or single shortcut arrays' {
         $root=Split-Path -Parent $PSScriptRoot
         # The ZIP test also imports an extracted copy; Pester needs one target.
