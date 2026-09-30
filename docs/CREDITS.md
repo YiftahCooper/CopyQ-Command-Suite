@@ -48,6 +48,17 @@ Contributor attribution was rechecked against each linked file's GitHub history 
 
 Clipboard Router is the renamed Canonical Dispatcher, not a new donor command. Splitting its implementation into feature modules does not change its existing provenance. Secret Protection (Standalone) reuses the suite's independently rewritten protection code and retains the inspiration credit for [Ignore Passwords, Tokens](https://github.com/hluk/copyq-commands/blob/master/commands/ignore-passwords-tokens.ini). Neither export republishes that donor's command body.
 
+The shared one-time save and notification orchestration are original suite code,
+built on CopyQ's documented [asynchronous actions](https://copyq.readthedocs.io/en/latest/scripting-api.html#action),
+[confirmation dialogs](https://copyq.readthedocs.io/en/latest/scripting-api.html#dialog)
+and [SHA-256 helper](https://copyq.readthedocs.io/en/latest/scripting-api.html#sha256sum).
+Native Windows delivery reuses [KDE SnoreToast](https://github.com/KDE/snoretoast),
+already shipped with CopyQ. Its maintainers provide the native toast and event
+handling; our integration uses its CLI and exit statuses (verified with bundled
+version 0.9.1). Neither SnoreToast source nor its executable is redistributed by
+this repository. The integration does not copy an upstream command body or
+introduce a separate service.
+
 ## Moonlander companion project
 
 The three Moonlander CopyQ wrappers integrate with [YiftahCooper/Moonlander-Custom-Config](https://github.com/YiftahCooper/Moonlander-Custom-Config). That repository supplies the clipboard transaction scripts, transformations, installer, and reselection executable; none of those runtime files are duplicated here.

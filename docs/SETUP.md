@@ -22,6 +22,15 @@ No Node.js, npm or Pester is needed to run the setup assistant.
 OCR, translation, rendering and Moonlander commands are separate from either
 option. See the [feature comparison](../README.md#clipboard-router-or-secret-protection-standalone).
 
+Both protection options include native Windows click-to-confirm saving for
+eligible exclusions and redacted blocks, using `snoretoast.exe` already bundled
+beside CopyQ. No separate checkbox or helper installation is needed. Updating
+only your installed protection option is sufficient. This feature does not
+change CopyQ's notification-style preference; enable native notifications there
+if you also want its other messages styled by Windows. Missing-helper failures
+retain protection and report `SAVE_UNAVAILABLE`. See the
+[save-once privacy contract](../README.md#save-an-ignored-item-or-redacted-original-once).
+
 ## Before opening it
 
 - Windows and **CopyQ 16.0.0**, running as your normal Windows user.

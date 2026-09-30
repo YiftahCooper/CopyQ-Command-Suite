@@ -39,7 +39,7 @@ test("dispatcher suppresses conceal metadata even without plain text", () => {
   try { vm.runInNewContext(dispatcher().cmd.replace(/^copyq:\s*/, ""), context); } catch (_) {}
   assert.equal(ignored, true);
 });
-function runtimeOnly(command) { return command.slice(command.lastIndexOf("}());") + 5); }
+function runtimeOnly(command) { const boundary = "\n}());\n"; return command.slice(command.indexOf(boundary) + boundary.length); }
 
 test("dispatcher removes alternate secret formats but never writes the system clipboard or frequency state", () => {
   const raw = "Use ghp_" + "a".repeat(36) + " for this request";
@@ -81,11 +81,16 @@ test("the generated dispatcher embeds its dependency closure in ES5", () => {
 });
 
 test("dispatcher gives a content-free notification before ignoring a secret", () => {
-  const command = dispatcher().cmd;
-  const notice = "notification('.id', 'secret-ignore', '.title', 'Ignoring secret in the clipboard', '.message', 'SECRET_IGNORED')";
-  assert.equal(command.includes(notice), true);
-  assert.equal(command.indexOf(notice) < command.indexOf("ignore();", command.indexOf(notice)), true);
-  assert.equal(notice.includes("text"), false);
+  const events = []; const raw = 'ghp_' + 'a'.repeat(36); const stop = {};
+  const context = {
+    commands: () => [dispatcher()], dataFormats: () => ['text/plain'], data: () => raw,
+    str: String, mimeText: 'text/plain', mimeOwner: 'owner', mimeHidden: 'hidden',
+    notification: (...args) => events.push(args), ignore: () => events.push('ignored'), abort: () => { throw stop; },
+  };
+  try { vm.runInNewContext(dispatcher().cmd.replace(/^copyq:\s*/, ''), context); } catch (e) { if (e !== stop) throw e; }
+  assert.ok(events[0].includes('SECRET_IGNORED'));
+  assert.equal(events[1], 'ignored');
+  assert.ok(!JSON.stringify(events).includes(raw));
 });
 
 test("shared core trims frequency identity while preserving conservative secret detection", () => {
@@ -98,7 +103,7 @@ test("shared core trims frequency identity while preserving conservative secret 
   assert.equal(Core.isHighConfidenceSecret("0123456789abcdef0123456789abcdef", []), true);
   assert.equal(Core.isHighConfidenceSecret("abcdef0123456789".repeat(4), []), true);
   assert.equal(Core.isHighConfidenceSecret("OpaqueSecret123456", []), true);
-  assert.equal(Core.isHighConfidenceSecret("550e8400-e29b-41d4-a716-446655440000", []), false);
+  assert.equal(Core.isHighConfidenceSecret("550e8400-e29b-41d4-a716-446655440000", []), true);
   assert.equal(Core.isHighConfidenceSecret("D:\\work\\CopyQ-16.0.0", []), false);
   assert.equal(Core.isHighConfidenceSecret("/srv/copyq/CopyQ-16.0.0", []), false);
   assert.equal(Core.isHighConfidenceSecret("v16.0.0-beta.1", []), false);

@@ -18,7 +18,6 @@ function validJwt(text) { var parts = text.split('.'); var head; var body; try {
 function secretFormat(formats) { return hasFormat(formats, /(?:application\/x-copyq-secret|org\.nspasteboard\.concealedtype|clipboard viewer ignore|x-kde-passwordmanagerhint|nspasteboard concealed|mimesecret|com\.agilebits\.onepassword|1password|bitwarden|keepass|lastpass|password-manager)/i); }
 function structuredNonSecret(text) {
   return isStandaloneUrl(text)
-    || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text)
     || /^(?:[A-Za-z]:[\\/]|\\\\|\/)[^\r\n]+$/.test(text)
     || /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(text)
     || /^[A-Z][A-Z0-9]{1,9}-\d{1,10}$/.test(text);
@@ -26,6 +25,8 @@ function structuredNonSecret(text) {
 function historicalOpaqueSecret(text) {
   var classes = 0;
   if (text.length < 10 || text.length > 150 || /\s/.test(text)) return false;
+  // Initial capitalization alone is normal prose, not evidence of a password.
+  if (/^[A-Z][a-z]+$/.test(text)) return false;
   // A compact document is not one password. Embedded credential detection
   // runs separately; this exemption only narrows the generic guessing rule.
   if (/^[\[{]/.test(text)) {
@@ -36,17 +37,44 @@ function historicalOpaqueSecret(text) {
   if (/\d/.test(text)) classes += 1;
   return classes >= 2;
 }
-function isHighConfidenceSecret(value, formats) {
-  var text = trim(value);
-  if (secretFormat(formats)) return true;
+function explicitSecret(text) {
   if (/^-----BEGIN (?:[A-Z0-9 ]+ )?(?:PRIVATE KEY|OPENSSH PRIVATE KEY)-----/m.test(text) || validJwt(text)) return true;
   if (/^(?:sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|glpat-[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{12,}|AIza[0-9A-Za-z_-]{30,}|AKIA[0-9A-Z]{16}|npm_[A-Za-z0-9_-]{20,}|pypi-[A-Za-z0-9_-]{20,})$/.test(text)) return true;
   if (/^authorization:\s*(?:bearer|basic|token)\s+\S{12,}$/i.test(text)) return true;
   if(/^\s*(?:export\s+)?(?:[A-Za-z_][A-Za-z0-9_]*(?:PASSWORD|TOKEN|SECRET|API_KEY)[A-Za-z0-9_]*|PASSWORD|TOKEN|SECRET|API_KEY)\s*=\s*\S{12,}\s*$/i.test(text)) return true;
   if (credentialUrl(text)) return true;
+  return false;
+}
+function heuristicSecret(text) {
   if (/^[0-9a-f]{32,128}$/i.test(text)) return true;
+  // A bare UUID can be an API key. Do not infer safety from its shape.
+  if (/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(text)) return true;
   if (structuredNonSecret(text)) return false;
   return historicalOpaqueSecret(text);
+}
+function isHighConfidenceSecret(value, formats) {
+  var text = trim(value);
+  return secretFormat(formats) || explicitSecret(text) || heuristicSecret(text);
+}
+
+// Only ambiguous guesses may be rescued. Explicit credentials, concealed
+// clipboard data and non-text/internal events never receive an override.
+function canSaveIgnoredOnce(input) {
+  var text = trim(input && input.text);
+  var formats = input && input.formats || [];
+  if (secretFormat(formats) || hasFormat(formats, /^image\//i)
+      || (input && input.mimeOwner && formats.indexOf(input.mimeOwner) >= 0)
+      || (input && input.mimeHidden && formats.indexOf(input.mimeHidden) >= 0)) return false;
+  return heuristicSecret(text) && !explicitSecret(text) && !redactSecrets(text).redacted;
+}
+// Redacted mixed text may also be saved by explicit consent, while the original
+// remains on the clipboard. Concealment/internal/image metadata is never bypassed.
+function canSaveProtectedOnce(input) {
+  var formats = input && input.formats || [];
+  if (secretFormat(formats) || hasFormat(formats, /^image\//i)
+      || (input && input.mimeOwner && formats.indexOf(input.mimeOwner) >= 0)
+      || (input && input.mimeHidden && formats.indexOf(input.mimeHidden) >= 0)) return false;
+  return canSaveIgnoredOnce(input) || inspectClipboard(input).action === 'redacted';
 }
 function redactSecrets(value) {
   var original = String(value == null ? '' : value); var marker = '[REDACTED]';
@@ -88,4 +116,4 @@ function inspectClipboard(input) {
   return { action: 'allowed', frequencyEligible: trim(text) !== '' };
 }
 
-module.exports = { validJwt: validJwt, secretFormat: secretFormat, isHighConfidenceSecret: isHighConfidenceSecret, redactSecrets: redactSecrets, inspectClipboard: inspectClipboard };
+module.exports = { validJwt: validJwt, secretFormat: secretFormat, isHighConfidenceSecret: isHighConfidenceSecret, redactSecrets: redactSecrets, inspectClipboard: inspectClipboard, canSaveIgnoredOnce: canSaveIgnoredOnce, canSaveProtectedOnce: canSaveProtectedOnce };

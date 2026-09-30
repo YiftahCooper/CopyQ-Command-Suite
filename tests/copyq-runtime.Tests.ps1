@@ -28,13 +28,20 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
             $process.StartInfo = $start
             try {
                 [void] $process.Start()
+                # Drain both pipes concurrently: CopyQ can emit a large script
+                # backtrace even for an exception caught by a test fixture.
+                $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+                $stderrTask = $process.StandardError.ReadToEndAsync()
                 if ($null -ne $InputText) {
                     $process.StandardInput.Write($InputText)
                     $process.StandardInput.Close()
                 }
-                $stdout = $process.StandardOutput.ReadToEnd()
-                $stderr = $process.StandardError.ReadToEnd()
-                $process.WaitForExit()
+                if (-not $process.WaitForExit(30000)) {
+                    $process.Kill()
+                    throw 'ISOLATED_COPYQ_COMMAND_TIMEOUT'
+                }
+                $stdout = $stdoutTask.GetAwaiter().GetResult()
+                $stderr = $stderrTask.GetAwaiter().GetResult()
                 [pscustomobject]@{ ExitCode = $process.ExitCode; StdOut = $stdout.Trim(); StdErr = $stderr.Trim() }
             } finally {
                 $process.Dispose()
@@ -61,7 +68,11 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
         Start-IsolatedCopyQ
         $bundle = [IO.File]::ReadAllText((Join-Path (Split-Path -Parent $PSScriptRoot) 'commands\bundles\all.ini'))
         $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($bundle))
-        Invoke-IsolatedEval "var imported=importCommands(str(fromBase64('$encoded')));setCommands(imported);String(commands().filter(function(c){return /^(?:canonical|moonlander)\./.test(c.internalId||'');}).length)" | Should Be '18'
+        # Do not show real Windows notifications from synthetic automatic events.
+        # Keep the real asynchronous API available for the dedicated worker test.
+        $transport = 'global.testRealAction=global.action;global.action=function(code){if(str(code).indexOf("nativeSecretNotice")>=0){settings("test_notice_code",str(code));return;}return testRealAction.apply(this,arguments);};'
+        $transport64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($transport))
+        Invoke-IsolatedEval "var imported=importCommands(str(fromBase64('$encoded')));imported.push({name:'Test notification transport',isScript:true,cmd:str(fromBase64('$transport64'))});setCommands(imported);String(commands().filter(function(c){return /^(?:canonical|moonlander)\./.test(c.internalId||'');}).length)" | Should Be '18'
         Invoke-IsolatedCopyQ -Arguments @('exit') | Out-Null
         if (-not $script:ServerProcess.WaitForExit(5000)) { throw 'ISOLATED_COPYQ_DID_NOT_EXIT' }
         Start-IsolatedCopyQ
@@ -233,6 +244,11 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
 
     It 'stores compact JSON intact while preserving standalone and embedded secret protection' {
         $cases = @(
+            @{Text='Collegiate'; Accepted=$true; Stored='Collegiate'; Destination='Password Boundary Test'},
+            @{Text='Collegiate '; Accepted=$true; Stored='Collegiate '; Destination='Password Boundary Test'},
+            @{Text='550e8400-e29b-41d4-a716-446655440000'; Accepted=$false},
+            @{Text='{"id":"550e8400-e29b-41d4-a716-446655440000","ok":true}'; Accepted=$true; Stored='{"id":"550e8400-e29b-41d4-a716-446655440000","ok":true}'; Destination='Artifacts'},
+            @{Text='{"api_key":"550e8400-e29b-41d4-a716-446655440000","ok":true}'; Accepted=$true; Stored='{"api_key":"[REDACTED]","ok":true}'; Destination='Artifacts'},
             @{Text='{"level":"INFO","count":1}'; Accepted=$true; Stored='{"level":"INFO","count":1}'; Destination='Artifacts'},
             @{Text='[{"result":"SYNC_COMPLETE","revision":"r20260921"},1]'; Accepted=$true; Stored='[{"result":"SYNC_COMPLETE","revision":"r20260921"},1]'; Destination='Artifacts'},
             @{Text=('Z9' + ('q' * 148)); Accepted=$false},
@@ -251,6 +267,72 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
                 $result.stored | Should BeNullOrEmpty
             }
         }
+    }
+
+    It 'runs the native worker asynchronously with empty inherited input and saves only after a click and confirmation' {
+        foreach ($exitCode in @(0, 2, 3)) {
+            # Real action()/input()/File/info/hash/history APIs; only the GUI and
+            # system clipboard are replaced with synthetic in-worker fixtures.
+            $program = @'
+var raw='{"message":"Synthetic example","api_key":"123e4567-e89b-42d3-a456-426614174000"}';
+setData(mimeText,raw);setData(mimeHtml,'<b>'+raw+'</b>');setData(mimeOutputTab,'Native Redacted Test');
+if(runAutomaticCommands())saveData();
+var worker=str(settings('test_notice_code')).replace(/^copyq:\s*/,'');
+settings('test_worker_result','');
+var prelude='var cleanInput=str(input())==="" && str(data(mimeText))==="";var confirmations=0;var calls=[];var raw='+JSON.stringify(raw)+';'+
+'var clipboard=function(format){return format==="?"?"text/plain\\n":raw;};'+
+'var execute=function(){calls.push(Array.prototype.slice.call(arguments));return {exit_code:arguments[3]==="-close"?0:EXIT_CODE};};'+
+'var dialog=function(){confirmations++;return true;};var notification=function(){};'+
+'var old=config("clipboard_tab");config("clipboard_tab","Native Saved Test");tab("Native Saved Test");var mainBefore=size();tab("Artifacts");var before=size();';
+var ending='tab("Native Saved Test");var mainAdded=size()-mainBefore;tab("Artifacts");settings("test_worker_result",JSON.stringify({cleanInput:cleanInput,confirmations:confirmations,added:size()-before,mainAdded:mainAdded,text:str(read(mimeText,0)),redacted:str(read(mimeText,confirmations?1:0)),calls:calls}));config("clipboard_tab",old);';
+testRealAction('copyq:\n'+prelude+worker+'\n'+ending);
+'SCHEDULED';
+'@
+            $program = $program.Replace('EXIT_CODE', [string]$exitCode)
+            Invoke-IsolatedEval $program | Should Be 'SCHEDULED'
+            $result = $null
+            for ($attempt = 0; $attempt -lt 30; $attempt++) {
+                $json = Invoke-IsolatedEval "str(settings('test_worker_result'))"
+                if ($json) { $result = $json | ConvertFrom-Json; break }
+                Start-Sleep -Milliseconds 100
+            }
+            $result | Should Not BeNullOrEmpty
+            $result.cleanInput | Should Be $true
+            $result.confirmations | Should Be ([int]($exitCode -eq 0))
+            $result.added | Should Be ([int]($exitCode -eq 0))
+            $result.mainAdded | Should Be 0
+            if ($exitCode -eq 0) {
+                $result.text | Should Be '{"message":"Synthetic example","api_key":"123e4567-e89b-42d3-a456-426614174000"}'
+            }
+            ($result.calls | ConvertTo-Json -Depth 5) | Should Not Match '123e4567'
+            $result.redacted | Should Be '{"message":"Synthetic example","api_key":"[REDACTED]"}'
+        }
+    }
+
+    It 'executes the one-time save action from both exports without a router dependency or persistent exemption' {
+        $root = Split-Path -Parent $PSScriptRoot
+        $alternative = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([IO.File]::ReadAllText((Join-Path $root 'commands\alternatives\secret-protection.ini'))))
+        foreach ($selector in @("commands().filter(function(c){return c.internalId==='canonical.dispatcher';})[0]", "importCommands(str(fromBase64('$alternative')))[0]")) {
+            $action = Invoke-IsolatedEval "var c=$selector;var captured;var ignored=false;var action=function(code){captured=code;};var ignore=function(){ignored=true;};var abort=function(){throw 'TEST_STOP';};setData(mimeText,'123e4567-e89b-42d3-a456-426614174000');try{eval(c.cmd.replace(/^copyq:\\s*/,''));}catch(e){if(e!=='TEST_STOP')throw e;}JSON.stringify({ignored:ignored,script:captured,digest:str(sha256sum('123e4567-e89b-42d3-a456-426614174000'))})" | ConvertFrom-Json
+            $action.ignored | Should Be $true
+            $action.digest | Should Match '^[0-9a-f]{64}$'
+            $action.script | Should Not Match '123e4567-e89b-42d3-a456-426614174000'
+            $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($action.script))
+            $result = Invoke-IsolatedEval "var before=settings('frequent_usage_counts_v3');var oldTab=config('clipboard_tab');var target='Saved Once Test';config('clipboard_tab',target);tab(target);var beforeSize=size();var clipboard=function(format){return format==='?'?'text/plain\ntext/html\n':'123e4567-e89b-42d3-a456-426614174000';};var execute=function(){return {exit_code:0,stdout:'',stderr:''};};var confirmations=0;var dialog=function(){confirmations++;return true;};var notices=[];var notification=function(){notices.push(arguments[5]);};try{eval(str(fromBase64('$encoded')).replace(/^copyq:\\s*/,''));tab(target);JSON.stringify({added:size()-beforeSize,text:str(read(mimeText,0)),formats:Object.keys(getItem(0)),confirmations:confirmations,sameFrequency:before===settings('frequent_usage_counts_v3'),reason:notices[0]});}finally{config('clipboard_tab',oldTab);}" | ConvertFrom-Json
+            $result.added | Should Be 1
+            $result.text | Should Be '123e4567-e89b-42d3-a456-426614174000'
+            $result.formats | Should Be @('text/plain')
+            $result.confirmations | Should Be 1
+            $result.sameFrequency | Should Be $true
+            $result.reason | Should Be 'SECRET_SAVED_ONCE'
+
+            foreach ($scenario in @('cancel', 'stale-before', 'stale-during', 'concealed-during')) {
+                $result = Invoke-IsolatedEval "tab('Saved Once Test');var before=size();var scenario='$scenario';var value=scenario==='stale-before'?'OtherPass123!':'123e4567-e89b-42d3-a456-426614174000';var formats='text/plain\n';var clipboard=function(format){return format==='?'?formats:value;};var execute=function(){return {exit_code:0};};var dialog=function(){if(scenario==='stale-during')value='OtherPass123!';if(scenario==='concealed-during')formats+='Clipboard Viewer Ignore\n';return scenario==='cancel'?undefined:true;};var notification=function(){};var code=str(fromBase64('$encoded')).replace(/^copyq:\\s*/,'');var payload=JSON.parse(code.slice(code.lastIndexOf('nativeSecretNotice(')+19,-2));settings('secret_notification_current',payload.id);eval(code);tab('Saved Once Test');String(size()===before)"
+                $result | Should Be 'true'
+            }
+        }
+        # Copying the value again remains excluded and cannot remove the saved item.
+        Invoke-IsolatedEval "tab('Saved Once Test');var before=size();setData(mimeText,'123e4567-e89b-42d3-a456-426614174000');var accepted=runAutomaticCommands();tab('Saved Once Test');String(!accepted && size()===before && str(read(mimeText,0))==='123e4567-e89b-42d3-a456-426614174000')" | Should Be 'true'
     }
 
     It 'stores only redacted MIME data and undo cannot recover the original secret' {
@@ -283,7 +365,7 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
         $baseline = Invoke-IsolatedEval 'exportCommands(commands())'
         $baselineEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($baseline))
         try {
-            Invoke-IsolatedEval "setCommands(importCommands(str(fromBase64('$alternative'))));'READY'" | Should Be 'READY'
+            Invoke-IsolatedEval "var transport=commands().filter(function(c){return c.name==='Test notification transport';});setCommands(importCommands(str(fromBase64('$alternative'))).concat(transport));'READY'" | Should Be 'READY'
             foreach ($sample in @('https://example.test/standalone', 'const plain = 1;', 'ordinary text')) {
                 $sampleEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($sample))
                 $result = Invoke-IsolatedEval "var before=settings('frequent_usage_counts_v3');setData(mimeText,fromBase64('$sampleEncoded'));setData(mimeOutputTab,'Standalone Test');var accepted=runAutomaticCommands();if(accepted)saveData();tab('Standalone Test');JSON.stringify({text:str(read(mimeText,0)),destination:str(data(mimeOutputTab)),sameFrequency:before===settings('frequent_usage_counts_v3')})" | ConvertFrom-Json

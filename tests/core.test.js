@@ -10,6 +10,36 @@ const { isCode, routeContent } = require("../src/routing");
 const { FrequencyStore, hashesFor, v2HashesFor, legacyKiloHash } = require("../src/frequency");
 const core = require("../src/core-node");
 
+test("ordinary capitalized words are retained without weakening explicit protection", () => {
+  for (const text of ["Collegiate", "Collegiate ", " Collegiate", "University", "Internationalization", "collegiate", "COLLEGIATE"]) {
+    const result = core.route({ text });
+    assert.equal(result.action, "default", text);
+    assert.equal(result.frequencyEligible, true);
+    assert.equal(result.redactedText, undefined);
+  }
+  for (const text of ["Collegiate123", "rAnDoMlEtTeRs", "ghp_" + "a".repeat(36)]) {
+    assert.equal(core.route({ text }).action, "ignored", text);
+  }
+  assert.equal(core.route({ text: "Collegiate", formats: ["Clipboard Viewer Ignore"] }).action, "ignored");
+  assert.equal(core.route({ text: 'Note: password="Collegiate"' }).redactedText, 'Note: password="[REDACTED]"');
+});
+
+test("bare UUID-shaped values are excluded but unlabeled document and URL identifiers survive", () => {
+  const uuid = "550e8400-e29b-41d4-a716-446655440000";
+  for (const text of [uuid, " " + uuid + " ", uuid.toUpperCase(), "00000000-0000-0000-0000-000000000000"]) {
+    assert.equal(core.route({ text }).action, "ignored", text);
+    assert.equal(core.route({ text }).frequencyEligible, false);
+  }
+  for (const text of ["Record " + uuid, JSON.stringify({ id: uuid, ok: true }), "https://example.test/" + uuid, "https://example.test/?id=" + uuid]) {
+    const result = core.route({ text });
+    assert.notEqual(result.action, "ignored", text);
+    assert.equal(result.redactedText, undefined);
+    assert.equal(result.frequencyEligible, true);
+  }
+  assert.equal(core.route({ text: JSON.stringify({ api_key: uuid, ok: true }) }).redactedText, '{"api_key":"[REDACTED]","ok":true}');
+  assert.equal(core.route({ text: "https://example.test/?api_key=" + uuid }).redactedText, "https://example.test/?api_key=[REDACTED]");
+});
+
 test("compact JSON containers are not mistaken for standalone passwords", () => {
   const documents = [
     { level: "INFO", count: 1 },
@@ -119,7 +149,7 @@ test("restores conservative opaque-secret protection with structured exemptions"
   assert.equal(isHighConfidenceSecret("0123456789abcdef0123456789abcdef"), true);
   assert.equal(isHighConfidenceSecret("a".repeat(64)), true);
   assert.equal(isHighConfidenceSecret("OpaqueSecret123456"), true);
-  assert.equal(isHighConfidenceSecret("550e8400-e29b-41d4-a716-446655440000"), false);
+  assert.equal(isHighConfidenceSecret("550e8400-e29b-41d4-a716-446655440000"), true);
   assert.equal(isHighConfidenceSecret("https://example.test/path?query=mixed-ABC123"), false);
   assert.equal(isHighConfidenceSecret("D:\\work\\file-2026.txt"), false);
   assert.equal(isHighConfidenceSecret("/srv/copyq/release-16.0.0"), false);

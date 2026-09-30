@@ -30,6 +30,7 @@ layer of protection to it.
 |---|---|---|
 | Exclude detected standalone secrets from history | Yes | Yes, same rules |
 | Redact recognized secrets inside saved documents | Yes | Yes, same rules |
+| Confirm a one-time save of a heuristic exclusion or redacted original | Yes, preserving the routed destination | Yes, into main history |
 | Leave the current clipboard unchanged for immediate paste | Yes | Yes |
 | Sort eligible text into URLs, Code, Artifacts and BIG tabs | Yes | No; other commands may still sort it |
 | Count copies and maintain the Frequent index | Yes | No |
@@ -82,7 +83,7 @@ Importing a command file does not install external programs or migrate existing 
 
 Put **Clipboard Router first in the command list**, ahead of all automatic commands, including community image and URL handlers. Importing a replacement can append it at the bottom: move it back to the top before applying. Earlier commands can store or fetch data before a later `ignore()` call.
 
-**Clipboard Router is the new display name for Canonical Dispatcher.** It retains the same internal identity and import filename. Replace the old command; do not keep both.
+**Compatibility:** Clipboard Router may appear as Canonical Dispatcher in older installations. They share an internal identity and import filename; replace the old command rather than keeping both.
 
 ### Installing the protection-only alternative
 
@@ -92,19 +93,83 @@ Do not enable it alongside Clipboard Router/Canonical Dispatcher. An enabled dup
 
 ### Modular source, self-contained imports
 
-Each suite command now has its own source file under `src/runtime/`. Secret detection, URL rules, artifact detection, routing, frequency state and utility helpers have separate implementations under `src/core/`. Generated commands embed only their required modules: title case no longer includes secret detection, for example. See [source architecture and contribution guide](docs/ARCHITECTURE.md).
+Each suite command has its own source file under `src/runtime/`. Secret detection, URL rules, artifact detection, routing, frequency state and utility helpers have separate implementations under `src/core/`. Generated commands embed only their required modules: title case includes casing helpers, not secret detection, for example. See [source architecture and contribution guide](docs/ARCHITECTURE.md).
 
-This source refactor does not require you to reinstall a working setup. To adopt a newer generated command, replace that command alone. Do not import a full bundle over an existing installation.
+The prebuilt INIs are self-contained: core commands do not load source files from this checkout at runtime. To update an installed command, replace that command alone. Do not import a full bundle over an existing installation.
 
-### Updating an existing setup: secret redaction and URL routing
+### Updating commands and avoiding competing URL handlers
 
 1. In `F6`, select all current commands and save a command backup outside the checkout.
 2. Replace only **Canonical Dispatcher / Clipboard Router** with `commands/individual/canonical-dispatcher.ini` and move it to the top. Leave its Format field empty so concealment metadata is checked even without plain text.
-3. Disable **Copy URL (web address) to other tab** if it targets `&web`. The dispatcher now routes standalone HTTP(S), FTP(S), and file URLs into `&URLs` without requiring an HTML response or a network connection.
+3. Disable **Copy URL (web address) to other tab** if it targets `&web`. Clipboard Router routes standalone HTTP(S), FTP(S), and file URLs into `&URLs` without requiring an HTML response or a network connection.
 4. If retaining **Tab for URLs with Title and Icon**, keep it after the dispatcher and set its Content filter to `^https?://\S+$`. It is optional enrichment, not the storage gate. That upstream command fetches copied addresses and can log URLs; disable it if automatic fetching is unwanted.
 5. Apply once. Existing history is not migrated or deleted by this update. Keep the old `web` tab until its unique items are safely preserved; blindly combining two full tabs can exceed CopyQ's item limit. Do not bulk-copy known credentials into `URLs`.
 
 To roll back the commands, replace the command list with the saved backup (do not append the backup to the existing commands). History is unaffected by this command-only update.
+
+### Save an ignored item or redacted original once
+
+On Windows, eligible `SECRET_IGNORED` and `SECRET_REDACTED` notifications are
+normal **clickable Windows notifications**. This action is available in **both**
+protection variants; it does not require Clipboard Router or another installed
+command. Ignored-item eligibility covers heuristic guesses such as bare UUIDs,
+hexadecimal values and password-looking strings. Redacted mixed text can also be
+saved explicitly while its original is still on the clipboard.
+
+1. Click the notification's **main body** while the intended original is still
+   on the clipboard. Closing it or letting it expire does nothing.
+2. Confirm that you want it stored **unredacted**. Cancel or close the dialog to
+   leave it excluded.
+3. The text is saved as a normal plain-text item (`SECRET_SAVED_ONCE`). With
+   Clipboard Router, a redacted block's original goes to the same destination as
+   its redacted copy (`Artifacts`, `Code`, `BIG`, URLs, or main history).
+   Ignored standalone values and Secret Protection (Standalone) use the configured
+   main history tab. Selecting the saved item later pastes normally, without another
+   confirmation. The save itself does not change the current clipboard. For a
+   redacted block this adds a separate original; the redacted entry is untouched.
+
+This is a **one-time save, not a permanent exception**. Copying the same value
+again from another application is still checked and may be ignored again. The
+previously saved item stays in history; it is not retrospectively removed. The
+manual save does not count toward Frequent or enable future frequency counting
+for that excluded value.
+
+The waiting action does not retain the original text. Saving requires the exact
+original to remain on the current clipboard, with eligibility checked before
+and after confirmation. Copying something else, even a whitespace variant,
+invalidates that save. There is no recovery of replaced originals.
+
+Recognized **standalone** credentials and password-manager concealment metadata
+remain non-overridable, as do hidden/owned/image data. For example, a bare
+provider-prefixed API key remains excluded; a mixed block containing that key
+can be explicitly saved from its redaction notification. This cannot recover an
+original after it has been replaced on the clipboard.
+**Only approve a value you intend to retain:** the saved plaintext has ordinary
+history lifetime and can subsequently appear in trash, exports or backups. The
+confirmation does not show the value; it refers to the still-current clipboard.
+
+Clickable notifications use **SnoreToast**, bundled with the official Windows
+CopyQ installation. No additional software or administrator access is needed.
+The short-lived toast respects Windows notification delivery settings. A newer
+actionable notice invalidates the previous action, though an older toast can
+remain briefly visible during rapid copying. Use the live notification: old
+Notification Centre entries and application restarts do not preserve the action.
+
+This native transport bypasses CopyQ's notification-style preference. You can
+enable CopyQ's **native notifications** preference for consistent styling of its
+other messages; setup does not change that preference. If the bundled helper is
+missing, unsupported or fails, protection still applies and CopyQ reports the
+reason plus `SAVE_UNAVAILABLE`, with no save action. No fallback installer runs.
+
+| Save result | Meaning |
+|---|---|
+| `SECRET_SAVED_ONCE` | The confirmed original was added to history. |
+| `SECRET_SAVE_EXPIRED` | The clipboard or notification is no longer eligible; copy the intended item again. |
+| `SECRET_SAVE_FAILED` | The destination is unavailable or the write failed; no other tab is used as a fallback. |
+| `SAVE_UNAVAILABLE` | Protection still ran, but clickable saving could not be offered. |
+
+See the [architecture guide](docs/ARCHITECTURE.md) for fingerprint checks,
+notification lifecycle and the shared source implementation.
 
 ### Original paste versus redacted paste
 
@@ -113,14 +178,18 @@ For newly copied text containing a recognized embedded credential:
 | Action | Result |
 |---|---|
 | Copy, then paste normally with Ctrl+V | Original text from the current Windows clipboard, including the credential. |
-| Select/paste the saved item from CopyQ | Text with the credential permanently replaced by `[REDACTED]`. |
-| Copy something else, then return to the older CopyQ item | Only the redacted version is available; CopyQ has no hidden original to restore. |
+| Select/paste the automatically saved redacted item from CopyQ | Text with the credential permanently replaced by `[REDACTED]`. |
+| Click the redaction notification and explicitly confirm saving the original | A separate unredacted plain-text history entry is added; the redacted entry remains. |
+| Copy something else without explicitly saving the original, then return to the older CopyQ item | Only the redacted version is available; CopyQ has no hidden original to restore. |
+| Select an original you previously confirmed saving | The saved unredacted text is available without another confirmation. |
 
-Selecting the saved item is also the way to share the redacted version immediately. It replaces the current clipboard with that safe history item. There is no new shortcut, vault, timeout, or recover-original command. The original can remain on the current Windows clipboard until something replaces it; this feature does not securely erase process memory or control Windows clipboard history/cloud sync, other clipboard tools, or the source application.
+Selecting the redacted item is also the way to share the redacted version immediately. It replaces the current clipboard with that safe history item. There is no new shortcut, vault, clipboard-expiry timer, or recovery of replaced originals. The original can remain on the current Windows clipboard until something replaces it; this feature does not securely erase process memory or control Windows clipboard history/cloud sync, other clipboard tools, or the source application.
 
 Whole standalone keys and password-manager concealment metadata continue to be **excluded** from history, with `SECRET_IGNORED`. Mixed documents instead receive `SECRET_REDACTED`. Recognized embedded forms include supported provider-prefixed tokens, structurally valid JWTs, private-key PEM blocks, authorization headers, and explicit password/token/secret/API-key assignments. Generic mixed-case words and unlabeled hashes inside documents are not guessed to be secrets.
 
-Generic standalone-password guessing applies only to 10–150 characters without whitespace and with at least two of lowercase letters, uppercase letters and digits, subject to the existing URL/path/UUID/version exceptions. Bare hexadecimal strings of 32–128 characters are also excluded: this intentionally favours protection over retaining an ambiguous standalone checksum. Valid JSON objects and arrays are not treated as one password, even when compact; their contents are still scanned for recognized embedded credentials. The 150-character cap does not disable recognition of longer provider tokens, private keys or explicitly labelled credentials. Unchanged documents produce no secret notification; `SECRET_REDACTED` reports a replacement, not a guarantee that every possible secret was found.
+Generic standalone-password guessing applies only to 10–150 characters without whitespace and with at least two of lowercase letters, uppercase letters and digits, subject to the existing URL/path/version exceptions. Initial capitalization alone is not enough: alphabetic words with one uppercase initial followed by lowercase letters, such as `Collegiate`, are retained (as are ordinary all-lowercase and all-uppercase words). This is a shape rule, not a dictionary lookup; an unlabeled password with that same word shape can also be retained. Explicit credential patterns and password-manager concealment metadata still take precedence.
+
+Bare hexadecimal strings of 32–128 characters and bare UUID-shaped values (`8-4-4-4-12` hexadecimal groups) are excluded: this intentionally favours protection over retaining an ambiguous standalone checksum or identifier. UUIDs inside ordinary documents or normal URL paths/query values remain intact unless they occur in a recognized credential context, such as an `api_key` field. Valid JSON objects and arrays are not treated as one password, even when compact; their contents are still scanned for recognized embedded credentials. The 150-character cap does not disable recognition of longer provider tokens, private keys or explicitly labelled credentials. Unchanged documents produce no secret notification; `SECRET_REDACTED` reports a replacement, not a guarantee that every possible secret was found. These checks apply to new clipboard events; installing an update does not scan or remove previously saved history.
 
 Ordinary URLs remain intact, including random-looking paths, IDs, and query values. Exceptions are recognizable credential forms: a password in URL user information, explicitly named `access_token`, `api_key`/`apikey`/`api-key`, `password`, `secret`, or `token` parameters, and private Google Calendar ICS feed tokens. Only the credential component is replaced. A redacted credential URL is for reference/sharing and may no longer work.
 
@@ -145,7 +214,7 @@ The [full catalogue](docs/commands/COMMANDS.md) explains activation, dependencie
 
 | Feature | Dependency |
 |---|---|
-| Core commands | CopyQ 16 |
+| Core commands | CopyQ 16; clickable secret notifications use its bundled `snoretoast.exe` on Windows |
 | Render Markdown | `marked` (`npm install -g marked`) |
 | Highlight Code | Python 3 and Pygments (`python -m pip install Pygments`) |
 | Copy Text in Image | Tesseract OCR with Tesseract eng and Tesseract heb language data |
@@ -199,7 +268,7 @@ If those keys are already assigned to other CopyQ commands, resolve the collisio
 
 ## Build and test
 
-Building is optional: normal users can import the committed INIs. To build and test, use Windows, a normal-user **PowerShell 7** session in the repository root, Node.js with npm, Git for Windows, and **CopyQ 16.0.0**. The exporter deliberately requires that exact CopyQ version for repeatable output. Verification for this refactor used Node 24 and Pester **3.4.0**; the Pester 5 assertion syntax is not interchangeable. Install or make Pester 3.4.0 available before running the test block. OCR/Pygments tests also require the dependencies listed above; Azure tests use synthetic credentials and mocked HTTP responses, not a live subscription.
+Building is optional: normal users can import the committed INIs. To build and test, use Windows, a normal-user **PowerShell 7** session in the repository root, Node.js with npm, Git for Windows, and **CopyQ 16.0.0**. The exporter deliberately requires that exact CopyQ version for repeatable output. The tested toolchain uses Node 24 and Pester **3.4.0**; the Pester 5 assertion syntax is not interchangeable. Install or make Pester 3.4.0 available before running the test block. OCR/Pygments tests also require the dependencies listed above; Azure tests use synthetic credentials and mocked HTTP responses, not a live subscription.
 
 The committed INI files are generated from the JavaScript command model through one isolated CopyQ session. Run each step only if the preceding step succeeds:
 

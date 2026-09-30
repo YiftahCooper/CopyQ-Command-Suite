@@ -88,6 +88,10 @@ test("installing both automatic handlers fails closed before routing or frequenc
 test("protection notifications distinguish kept JSON, excluded passwords and redacted documents", () => {
   const command = require("../src/commands").buildSecretProtection();
   for (const [text, expected, reason, excluded] of [
+    ["Collegiate", "Collegiate", null, false],
+    ["Collegiate ", "Collegiate ", null, false],
+    ["550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440000", "SECRET_IGNORED", true],
+    ['{"id":"550e8400-e29b-41d4-a716-446655440000","ok":true}', '{"id":"550e8400-e29b-41d4-a716-446655440000","ok":true}', null, false],
     ['{"level":"INFO","count":1}', '{"level":"INFO","count":1}', null, false],
     ["Z9" + "q".repeat(148), "Z9" + "q".repeat(148), "SECRET_IGNORED", true],
     ["Z9" + "q".repeat(149), "Z9" + "q".repeat(149), null, false],

@@ -20,9 +20,21 @@ Rendering, OCR, translation and Moonlander remain separate commands.
 - Privacy: whole secrets/concealment metadata are excluded (`SECRET_IGNORED`). Recognized credentials within documents are replaced with `[REDACTED]` in the stored item (`SECRET_REDACTED`). All original alternate formats are dropped for that item, and it is not frequency-counted. Ordinary paste still uses the current Windows clipboard original; selecting from history pastes only the sanitized version. Undo cannot recover removed credentials. Ordinary URL IDs stay intact; explicit credential parameters, embedded URL passwords and private Google Calendar feed tokens are redacted. This does not control other clipboard managers or Windows clipboard history. Frequency state contains at most 4,096 hashes, counts, and recency values rather than copied text.
 - Dependencies: CopyQ 16.
 
+Both protection variants offer native Windows **click-to-confirm** notifications
+for heuristic exclusions and redacted mixed text. A confirmed save inserts the
+still-current original once as ordinary plain text. Clipboard Router preserves
+the redacted item's routed destination; ignored standalone values and Secret
+Protection (Standalone) use configured main history. Existing redacted entries
+remain. Later history paste needs no confirmation;
+external copies remain subject to protection. Dismissal and expiry do nothing.
+There is no persistent exemption or Frequent count. Explicit standalone
+credentials, concealment and internal/image metadata cannot be overridden.
+The transport uses CopyQ's bundled SnoreToast, not an additional installation.
+See [one-time save, expiry and privacy details](../../README.md#save-an-ignored-item-or-redacted-original-once).
+
 `Artifacts` requires a strong signal: a JSON object/array with at least two entries, a structured multiline PowerShell or shell command, a command transcript, multiple timestamped or level-prefixed log lines, a stack trace/backtrace, a unified diff, or a configuration block with at least three entries. A standalone path, `git status`, a one-line PowerShell command, a short identifier, an ordinary URL, normal prose, and normal Markdown prose stay outside `Artifacts`. Bare `#` headings and `>` quotations do not count as shell prompts; transcripts need an unambiguous prompt such as `$`, `PS C:\work>`, or `user@host:~#`.
 
-Standalone guessing is limited to 10–150 characters with no whitespace and at least two of lowercase letters, uppercase letters and digits, with existing structured-value exceptions. Bare 32–128-character hexadecimal values remain excluded. JSON objects and arrays bypass only the generic whole-item guess, not embedded credential detection or password-manager concealment metadata. Recognized credentials longer than 150 characters remain protected. This policy deliberately accepts false positives for ambiguous standalone values while preserving ordinary document hashes and identifiers.
+Standalone guessing is limited to 10–150 characters with no whitespace and at least two of lowercase letters, uppercase letters and digits, with existing URL/path/version exceptions. A single uppercase initial followed entirely by lowercase letters (for example, `Collegiate`) does not trigger that guess. This is a shape exemption, not proof that the text is a word or is safe. Bare 32–128-character hexadecimal values and bare UUID-shaped values remain excluded, including harmless identifiers with that shape. Unlabeled UUIDs in documents and ordinary URLs remain intact. JSON objects and arrays bypass only the generic whole-item guess, not embedded credential detection or password-manager concealment metadata. Recognized credentials longer than 150 characters remain protected. These rules process new clipboard events, not historical entries.
 
 ### Secret Protection (Standalone) — optional alternative
 
@@ -32,7 +44,7 @@ of the router. It leaves tab organisation and frequency features to other tools.
 
 - Download: [commands/alternatives/secret-protection.ini](../../commands/alternatives/secret-protection.ini) (not in the standard bundles).
 - Activation: first automatic command, with an empty Format filter. Use **instead of**, not alongside, Clipboard Router or Canonical Dispatcher.
-- Behaviour: the same standalone-secret exclusion and permanent history redaction described above. Immediate system-clipboard paste remains unchanged. It does not choose a destination tab, access frequency settings or create Frequent entries; later user-installed handlers retain responsibility for routing.
+- Behaviour: the same standalone-secret exclusion, permanent history redaction and confirmed one-time save action described above. Immediate system-clipboard paste remains unchanged. Automatic processing does not choose a destination tab, access frequency settings or create Frequent entries; later user-installed handlers retain responsibility for routing. The explicit save action writes only to the configured main history tab.
 - Strength: install secret protection without adopting the suite's tab organisation or frequency feature. Its export embeds only secret-related helpers.
 - Limitation: the same detection and alternate-format limitations apply. An enabled duplicate handler or coexistence with the router fails closed with `SECRET_HANDLER_CONFLICT`; remove the extra command to resume storing copies.
 - Privacy: content-free `SECRET_IGNORED`, `SECRET_REDACTED` and `SECRET_REDACTION_FAILED` notifications. No copied content is logged.

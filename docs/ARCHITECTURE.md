@@ -9,6 +9,9 @@ every feature in the suite. No extra runtime module installation is required.
 | Concern | Source |
 |---|---|
 | Secret detection, redaction and safety decisions | `src/core/secrets.js` |
+| Shared protection notifications and filtering | `src/runtime/secret-protection-fragment.js` |
+| Confirmed one-time save notification action | `src/runtime/secret-save-once.js` |
+| Native Windows notification transport | `src/runtime/secret-native-notification.js` |
 | URL recognition and credential URL rules | `src/core/urls.js` |
 | Technical artifact detection | `src/core/artifacts.js` |
 | Source-code detection | `src/core/code.js` |
@@ -40,6 +43,40 @@ embeds only the requested core modules and their dependencies. For example:
 - Protection-only includes secrets and their common/URL helpers, not routing or
   frequency tracking.
 - Clipboard Router includes safety, routing and frequency modules.
+
+The one-time save action belongs to protection, not routing. Both variants embed
+`secret-save-once.js` and `secret-native-notification.js` with only their secret
+core dependencies. An asynchronous `action()` receives generated code containing
+a fingerprint, random notice IDs and an optional router destination, never
+original text or event MIME data.
+The builder forbids CopyQ's percent-1 substitution placeholder in that worker so
+`action()` cannot implicitly inject clipboard text. Routing is not blocked while
+the toast waits. SnoreToast has its own bounded activation wait; no resident
+service or polling timer is added.
+
+The worker resolves `snoretoast.exe` beside `info('exe')`, uses the existing
+`copyq` app identity and a short toast, and accepts only body-click exit code 0.
+Codes 1/2/3 do nothing. Missing helpers and errors leave protection intact and
+report `SAVE_UNAVAILABLE`. Only generic notification text and a random ID reach
+the helper. `secret_notification_current` holds only the latest random ID:
+new workers attempt to close a predecessor, callbacks check ownership, and
+cleanup targets only their own toast. A queued supersession can leave an older
+toast visible until expiry, without authorizing its callback. The single ID
+remains until the next dispatch replaces it;
+there is no non-atomic check-then-clear that could erase a newer request. No
+secret, fingerprint, or allowlist is persisted there.
+
+After a click, the save action reads the current clipboard, revalidates its
+fingerprint, metadata and notification ownership before and after confirmation,
+then inserts plain text without rerunning classification or frequency counting.
+The router supplies the same destination used for the redacted item, from one
+shared destination map in its runtime builder. Standalone protection and ignored
+values supply no routed destination and use configured main history instead.
+A removed routed tab fails the save rather than silently changing destination.
+Mixed originals are added separately; sanitized history is
+not modified. There is no extra command object or runtime source file to install.
+Old Notification Centre entries and restarts are not durable callbacks.
+See the [user contract](../README.md#save-an-ignored-item-or-redacted-original-once).
 
 Each runtime command declares its required modules. `src/runtime/command-source.js`
 combines them with its body. The existing PowerShell builder exports the result
