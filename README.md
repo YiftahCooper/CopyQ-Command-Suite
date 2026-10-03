@@ -1,298 +1,270 @@
 # CopyQ Command Suite
 
-A curated Windows command collection for [CopyQ](https://github.com/hluk/CopyQ) 16. It combines privacy-aware clipboard routing, automatic Markdown rendering, OCR, code highlighting, translation, text utilities, and optional Moonlander selected-text commands.
+Make your clipboard easier to use: keep logs and code out of the way, find text you copy often, recover deleted items, read text from images, and keep detected secrets out of saved history.
 
-The repository distributes eighteen original or independently rewritten commands, plus an optional protection-only alternative. Community commands used in the author's personal setup are credited and linked, but their source is not republished here.
+This is a collection of optional commands for [CopyQ](https://github.com/hluk/CopyQ), a clipboard manager that remembers what you copy. It is made for **Windows and CopyQ 16**. Choose the commands you want; you do not need to install everything.
 
-## Clipboard Router or Secret Protection (Standalone)?
+There are **18 commands**, available separately or in bundles, plus a secret-protection-only alternative. Most work entirely on your PC. Translation is optional and uses Azure; web search opens the website you choose.
 
-**For the suite's automatic sorting and Frequent index, choose Clipboard Router.
-It already includes secret protection. You do not need both commands.**
+- [Install with the setup assistant](#install-with-the-setup-assistant)
+- [Install commands manually](#install-commands-manually)
+- [What each command does](#what-each-command-does)
+- [How secret protection works](#how-secret-protection-works)
+- [Extra software for optional features](#extra-software-for-optional-features)
+- [Credits](#credits-and-license)
 
-Clipboard Router is an automatic command that decides what happens to each new
-copy **in CopyQ history**. "Router" means sorting copied text into the appropriate
-tab; it has nothing to do with a network router. It combines three jobs:
+## Install with the setup assistant
 
-1. **Protect history:** exclude detected standalone secrets and redact recognized
-   secrets inside documents, while leaving immediate ordinary paste unchanged.
-2. **Sort text:** send URLs, code, substantial technical artifacts and large text
-   to their appropriate tabs; leave ordinary text in the normal clipboard tab.
-3. **Build a Frequent index:** count eligible copies and add a secondary entry in
-   `Frequent` after six copies, without taking it out of its primary destination.
+This is the easiest way to choose commands, update an existing setup, and check that installation succeeded.
 
-**Secret Protection (Standalone)** is the same first job packaged on its own. It
-is for someone who wants secret filtering but wants to keep their existing tab
-organisation, or does not want the suite's automatic sorting and copy counting.
-"Standalone" means it works without Clipboard Router, not that it adds another
-layer of protection to it.
+You need **CopyQ 16.0.0** running and [PowerShell 7.2 or newer](https://github.com/PowerShell/PowerShell). Run setup from your normal Windows account, without administrator mode.
 
-| Feature | Clipboard Router | Secret Protection (Standalone) |
-|---|---|---|
-| Exclude detected standalone secrets from history | Yes | Yes, same rules |
-| Redact recognized secrets inside saved documents | Yes | Yes, same rules |
-| Confirm a one-time save of a heuristic exclusion or redacted original | Yes, preserving the routed destination | Yes, into main history |
-| Leave the current clipboard unchanged for immediate paste | Yes | Yes |
-| Sort eligible text into URLs, Code, Artifacts and BIG tabs | Yes | No; other commands may still sort it |
-| Count copies and maintain the Frequent index | Yes | No |
-| Included in the general-purpose and complete bundles | Yes | No; optional alternative |
+1. Download this repository using GitHub's **Code → Download ZIP**, then extract it. A complete Git checkout also works. Keep the folder together: the launcher needs the files beside it.
+2. Double-click **[CopyQ-Setup.cmd](CopyQ-Setup.cmd)** in that folder.
+3. Choose a preset or check individual commands. **Essentials** is a useful starting point. Features such as OCR and highlighting need the extra software listed [below](#extra-software-for-optional-features).
+4. Click **Preview changes**. It lists additions, updates, shortcut conflicts, and missing tools. Install those tools or uncheck the affected commands before continuing.
+5. Click **Install selected** and approve the displayed changes. Setup saves a private backup of your command definitions before applying them.
+6. If asked to restart CopyQ, exit it completely and start it again. This is needed when the undo listener changes.
+7. Click **Verify**, then try the features you chose with disposable text or images.
 
-Both run automatically when you copy; neither is a command you must invoke for
-each item. Enable **one**, and put it first among automatic commands. Enabling
-both causes `SECRET_HANDLER_CONFLICT`, not stronger protection. Leaving the
-standalone option unchecked when the router is installed is therefore correct.
+**Unchecked commands stay as they are.** Unchecking a box does not uninstall or disable an existing command. Setup updates selected commands; a conflicting protection command is removed only when that change is disclosed in the confirmation.
 
-Neither command includes OCR, translation, Markdown rendering, code highlighting,
-undoable deletion or Moonlander transformations: those are separate commands you
-can choose independently, subject to their documented dependencies. Secret
-detection remains heuristic; neither option guarantees that every secret is found.
+### Updating one command
 
-## Quick start
+Click **Uncheck all**, check the command you want, then use **Preview changes → Install selected → Verify**.
 
-For a guided Windows setup, extract the complete package and open **CopyQ-Setup.cmd**
-as your normal user with CopyQ 16.0.0 already running. The PowerShell 7.2+ wizard
-lets you select commands, load/save a nonsecret profile, resolve shortcuts,
-preview changes, install with a command-only rollback backup, and verify the
-installed definitions. It does not download dependencies or back up clipboard
-history. See the [setup and recovery guide](docs/SETUP.md). No Node.js or Pester
-is required to use the wizard or prebuilt imports.
+**Read installed selection** is optional. It selects the suite commands you already have and loads their current shortcuts. Use it when updating several commands or preserving customized shortcuts. You can then use **Uncheck all** without losing those loaded shortcut values.
 
-You can also open `CopyQ-Setup.cmd` directly from a complete repository checkout.
-For one-command updates, click **Uncheck all**, then select only the command you
-want. Shortcut edits remain intact. **Read installed selection** is optional and
-also recognizes the three original Moonlander wrappers without suite IDs; it
-does not modify them. Installation changes only the selected commands.
-To update without Azure, read the installed selection and uncheck **Translate to
-English** before previewing. Unchecked commands stay unchanged; translation is
-optional and does not block installation of the other tools.
+For a secret-protection update, select whichever option you use: **Clipboard Router** or **Secret Protection (Standalone)**. Both include the notification and save-to-history features.
 
-Manual installation remains available:
+### What setup checks and backs up
 
-1. Install CopyQ 16.
-2. Download an individual command from the [command catalogue](docs/commands/COMMANDS.md), or choose a bundle:
-   - [`commands/bundles/canonical.ini`](commands/bundles/canonical.ini) — fifteen general-purpose commands.
-   - [`commands/bundles/moonlander.ini`](commands/bundles/moonlander.ini) — three Moonlander integrations.
-   - [`commands/bundles/all.ini`](commands/bundles/all.ini) — all eighteen commands.
-3. Open CopyQ, press `F6`, choose **Load Commands**, select the downloaded INI (not a saved GitHub HTML page), review the command list, and confirm. For undoable deletion, import both **Move to Trash (Undoable)** and **Undo Delete**, then exit and restart CopyQ so the listener loads.
-4. Run the optional dependency report when using rendering, highlighting, OCR, translation, or Moonlander features:
+Verify checks installed command definitions, runs selected small helper checks, and reports missing dependencies. It does not test real pasting, your mouse or keyboard, OCR accuracy, or your Azure account. Try those features yourself afterward.
 
-   ```powershell
-   pwsh -NoProfile -File .\scripts\Test-Dependencies.ps1
-   ```
+Setup installs commands. It does not install CopyQ or other software, change startup settings, or back up clipboard history. Private command backups and receipts are stored under `%LOCALAPPDATA%\CopyQCommandSuite\setup`. Use **Restore commands** with the receipt to undo an installation; it refuses to overwrite later command edits.
 
-Importing a command file does not install external programs or migrate existing history. Once enabled, automatic commands can route new copies, and the undo listener can prune expired `(trash)` entries. Existing CopyQ settings are retained; the suite does not set your item limit, encryption or autostart preferences.
+**Save profile** remembers your chosen commands and shortcuts for another installation. A profile contains choices, not API keys or clipboard contents. For a complete personal backup including your own and community commands, use CopyQ's **F6 → select all → Save Commands** and keep that file privately.
 
-Put **Clipboard Router first in the command list**, ahead of all automatic commands, including community image and URL handlers. Importing a replacement can append it at the bottom: move it back to the top before applying. Earlier commands can store or fetch data before a later `ignore()` call.
+See the [setup and recovery guide](docs/SETUP.md) for profiles, troubleshooting, and recovery details.
 
-**Compatibility:** Clipboard Router may appear as Canonical Dispatcher in older installations. They share an internal identity and import filename; replace the old command rather than keeping both.
+## Install commands manually
 
-### Installing the protection-only alternative
+Manual imports need CopyQ 16. Commands without extra dependencies do not need PowerShell, Node.js, or the setup assistant.
 
-Import [`commands/alternatives/secret-protection.ini`](commands/alternatives/secret-protection.ini) instead of Clipboard Router. **Secret Protection (Standalone)** provides the same exclusion/redaction behaviour, but does not route items to tabs or count copies. Put it first, followed by whichever other commands you use.
+1. Pick an individual command from the links [below](#what-each-command-does), or choose a bundle:
 
-Do not enable it alongside Clipboard Router/Canonical Dispatcher. An enabled duplicate or conflicting handler stops processing with `SECRET_HANDLER_CONFLICT` until the extra handler is removed. This optional alternative is deliberately excluded from all three standard bundles.
+   | Bundle | Contents |
+   |---|---|
+   | [General tools](commands/bundles/canonical.ini) | All 15 general-purpose commands, including optional translation, OCR, and rendering tools. |
+   | [Moonlander tools](commands/bundles/moonlander.ini) | The three selected-text commands for the companion Moonlander setup. |
+   | [Everything](commands/bundles/all.ini) | All 18 commands. |
 
-### Modular source, self-contained imports
+2. On the command file's GitHub page, choose **Download raw file**. Save the `.ini` file itself, not the webpage.
+3. Open CopyQ and press **F6**. Choose **Load Commands**, select the downloaded file, review the imported commands, and apply.
+4. Put **Clipboard Router** or **Secret Protection (Standalone)** first in the command list, before other automatic commands. Choose one protection option, not both.
+5. If you imported **Move to Trash (Undoable)**, also import **Undo Delete**, then exit CopyQ completely and restart it.
+6. Install any extra software needed by your chosen commands and try them on disposable text or images.
 
-Each suite command has its own source file under `src/runtime/`. Secret detection, URL rules, artifact detection, routing, frequency state and utility helpers have separate implementations under `src/core/`. Generated commands embed only their required modules: title case includes casing helpers, not secret detection, for example. See [source architecture and contribution guide](docs/ARCHITECTURE.md).
+For an update, save your current commands first, then **replace the old version of the selected command**. Loading a file can append a second copy: remove the old command and check the order before applying. Avoid importing a whole bundle over an existing setup unless you intend to replace its matching commands yourself. The setup assistant handles these updates for you.
 
-The prebuilt INIs are self-contained: core commands do not load source files from this checkout at runtime. To update an installed command, replace that command alone. Do not import a full bundle over an existing installation.
+Older installations call Clipboard Router **Canonical Dispatcher**. It is the same command; the download filename remains `canonical-dispatcher.ini` for compatibility.
 
-### Updating commands and avoiding competing URL handlers
+## What each command does
 
-1. In `F6`, select all current commands and save a command backup outside the checkout.
-2. Replace only **Canonical Dispatcher / Clipboard Router** with `commands/individual/canonical-dispatcher.ini` and move it to the top. Leave its Format field empty so concealment metadata is checked even without plain text.
-3. Disable **Copy URL (web address) to other tab** if it targets `&web`. Clipboard Router routes standalone HTTP(S), FTP(S), and file URLs into `&URLs` without requiring an HTML response or a network connection.
-4. If retaining **Tab for URLs with Title and Icon**, keep it after the dispatcher and set its Content filter to `^https?://\S+$`. It is optional enrichment, not the storage gate. That upstream command fetches copied addresses and can log URLs; disable it if automatic fetching is unwanted.
-5. Apply once. Existing history is not migrated or deleted by this update. Keep the old `web` tab until its unique items are safely preserved; blindly combining two full tabs can exceed CopyQ's item limit. Do not bulk-copy known credentials into `URLs`.
+Commands marked **automatic** run when you copy. Most others appear when you right-click a suitable item in CopyQ. The basic case-changing and web-search tools act on text selected in another application; the Moonlander tools are designed for that selected-text workflow too.
 
-To roll back the commands, replace the command list with the saved backup (do not append the backup to the existing commands). History is unaffected by this command-only update.
+On Windows, **Meta** in CopyQ's shortcut settings means the **Windows key**.
 
-### Save an ignored item or redacted original once
+### Clipboard Router or Secret Protection (Standalone)?
 
-On Windows, eligible `SECRET_IGNORED` and `SECRET_REDACTED` notifications are
-normal **clickable Windows notifications**. This action is available in **both**
-protection variants; it does not require Clipboard Router or another installed
-command. Ignored-item eligibility covers heuristic guesses such as bare UUIDs,
-hexadecimal values and password-looking strings. Redacted mixed text can also be
-saved explicitly while its original is still on the clipboard.
+**Clipboard Router** is the automatic clipboard organizer. It protects saved history from detected secrets, puts different kinds of text into suitable tabs, and builds the `Frequent` list. “Router” means choosing a clipboard tab; it does not mean a network connection.
 
-1. Click the notification's **main body** while the intended original is still
-   on the clipboard. Closing it or letting it expire does nothing.
-2. Confirm that you want it stored **unredacted**. Cancel or close the dialog to
-   leave it excluded.
-3. The text is saved as a normal plain-text item (`SECRET_SAVED_ONCE`). With
-   Clipboard Router, a redacted block's original goes to the same destination as
-   its redacted copy (`Artifacts`, `Code`, `BIG`, URLs, or main history).
-   Ignored standalone values and Secret Protection (Standalone) use the configured
-   main history tab. Selecting the saved item later pastes normally, without another
-   confirmation. The save itself does not change the current clipboard. For a
-   redacted block this adds a separate original; the redacted entry is untouched.
+**Secret Protection (Standalone)** provides the same secret protection on its own. Choose it if you want to keep your current tab organization and do not want sorting or copy counting.
 
-This is a **one-time save, not a permanent exception**. Copying the same value
-again from another application is still checked and may be ignored again. The
-previously saved item stays in history; it is not retrospectively removed. The
-manual save does not count toward Frequent or enable future frequency counting
-for that excluded value.
-
-The waiting action does not retain the original text. Saving requires the exact
-original to remain on the current clipboard, with eligibility checked before
-and after confirmation. Copying something else, even a whitespace variant,
-invalidates that save. There is no recovery of replaced originals.
-
-Recognized **standalone** credentials and password-manager concealment metadata
-remain non-overridable, as do hidden/owned/image data. For example, a bare
-provider-prefixed API key remains excluded; a mixed block containing that key
-can be explicitly saved from its redaction notification. This cannot recover an
-original after it has been replaced on the clipboard.
-**Only approve a value you intend to retain:** the saved plaintext has ordinary
-history lifetime and can subsequently appear in trash, exports or backups. The
-confirmation does not show the value; it refers to the still-current clipboard.
-
-Clickable notifications use **SnoreToast**, bundled with the official Windows
-CopyQ installation, and display CopyQ's own icon. The image comes from CopyQ's
-embedded resources; no icon download or separate asset installation is needed.
-No additional software or administrator access is needed.
-The short-lived toast respects Windows notification delivery settings. A newer
-actionable notice invalidates the previous action, though an older toast can
-remain briefly visible during rapid copying. Use the live notification: old
-Notification Centre entries and application restarts do not preserve the action.
-
-This native transport bypasses CopyQ's notification-style preference. You can
-enable CopyQ's **native notifications** preference for consistent styling of its
-other messages; setup does not change that preference. If the bundled helper is
-missing, unsupported or fails, protection still applies and CopyQ reports the
-reason plus `SAVE_UNAVAILABLE`, with no save action. No fallback installer runs.
-
-| Save result | Meaning |
+| What you want | Choose |
 |---|---|
-| `SECRET_SAVED_ONCE` | The confirmed original was added to history. |
-| `SECRET_SAVE_EXPIRED` | The clipboard or notification is no longer eligible; copy the intended item again. |
-| `SECRET_SAVE_FAILED` | The destination is unavailable or the write failed; no other tab is used as a fallback. |
-| `SAVE_UNAVAILABLE` | Protection still ran, but clickable saving could not be offered. |
+| Secret protection, automatic sorting, and a Frequent list | [Clipboard Router](commands/individual/canonical-dispatcher.ini) |
+| Secret protection without changing how text is organized | [Secret Protection (Standalone)](commands/alternatives/secret-protection.ini) |
 
-See the [architecture guide](docs/ARCHITECTURE.md) for fingerprint checks,
-notification lifecycle and the shared source implementation.
+Use **one**. The router already includes protection, so an unchecked standalone option is expected. Enabling both stops normal processing with `SECRET_HANDLER_CONFLICT` until you remove the extra handler.
+
+OCR, rendering, translation, and undo are separate commands you can add as needed.
+
+#### Where Clipboard Router puts things
+
+| Copied content | Saved in |
+|---|---|
+| Text of 5,000 characters or more | `BIG` |
+| A standalone web, FTP, or file URL below that size limit | `&URLs` |
+| Structured JSON, logs, stack traces, command transcripts, multiline operational commands, diffs, or configuration blocks | `Artifacts` |
+| Recognized source code | `Code` |
+| Ordinary text, Markdown prose, a single path, or a short command such as `git status` | Your normal clipboard tab |
+
+These categories use recognizable patterns, so classification can occasionally be imperfect. For example, a JSON object needs at least two properties to qualify as an artifact. Markdown headings and quotations alone do not make a document an artifact. URLs are saved without visiting the address. Images retain their existing handling; this suite does not include a separate image-tab organizer.
+
+If you have an older **Copy URL (web address) to other tab** command that creates `&web`, disable it when using the router: it duplicates URL storage. The community **Tab for URLs with Title and Icon** command can run afterward if you want it, but it visits copied addresses. See the [catalogue](docs/commands/COMMANDS.md) for its filter and ordering.
+
+#### How Frequent works
+
+Copy the same eligible text **six times**, and the router adds a second copy to `Frequent`. The original stays in its usual tab, whether that is normal history, URLs, Code, Artifacts, or BIG. Later copies move the Frequent entry to the top without adding duplicates.
+
+Leading and trailing spaces are ignored when counting: `hello there` and ` hello there ` share a count. The Frequent entry uses trimmed text; the original item keeps its spacing. Secrets, redacted documents, images, and CopyQ's internal items are not counted. Counter settings store hashes and counts rather than copies of your text.
+
+Deleting an entry from Frequent dismisses it: it needs six fresh copies to return. Undoing that deletion restores its previous count and adds any copies made since deletion.
+
+### Recover deleted items
+
+**[Move to Trash (Undoable)](commands/individual/move-to-trash-undoable.ini)** — automatic after a CopyQ restart. Deleted items go to `(trash)` with their text, images, formatting, and other stored data intact. There is no separate menu action for this command.
+
+**[Undo Delete](commands/individual/undo-delete.ini)** — press **Ctrl+Z inside CopyQ**, or use its item menu, to restore the latest removal batch to its original tab and position. It restores a deleted Frequent entry's saved count too. Install both undo commands together.
+
+Trash is cleaned at startup and before another deletion: entries at least **30 days old** are permanently removed. Your CopyQ tab item limit can remove them sooner. Undo covers automatic history-limit removals too, so the latest batch may be an automatic removal. To permanently delete something immediately, delete it again from `(trash)`.
+
+### Make copied text easier to read
+
+**[Remove Background and Text Colors](commands/individual/remove-background-and-text-colors.ini)** — automatic for copied HTML, and also available in the menu. Removes inline color styling so copied rich text can use the destination's colors. It keeps text and HTML structure; it is not a general HTML security filter.
+
+**[Render Markdown](commands/individual/render-markdown.ini)** — automatically displays recognizable Markdown as formatted text: headings, lists, links, tables, quotations, and fenced code. You can also run it manually from the item menu. The original plain text remains available. Requires **marked**.
+
+**[Highlight Code](commands/individual/highlight-code.ini)** — select a text item and run it from the item menu to add colored syntax highlighting, a monospace font, and wrapping for long lines. It recognizes common Python declarations and otherwise guesses the language, so ambiguous snippets may get the wrong colors. Requires **Python 3 and Pygments**.
+
+### Get text from an image
+
+**[Copy Text in Image](commands/individual/copy-text-in-image.ini)** — select a **PNG image** in CopyQ, then run the command from its right-click menu or press **Win+Ctrl+T**. It reads English and Hebrew text from that image and puts the result on the clipboard, ready to paste. The original image stays in history.
+
+This uses **Tesseract OCR on your PC**. It does not need Azure, an account, or an internet connection, and it does not open a screenshot-selection crosshair. Small, blurry, or stylized text can be misread.
+
+### Translate text
+
+**[Translate to English](commands/individual/translate-to-english.ini)** — select a text item and run the command from its right-click menu. It sends the text to Azure Translator and puts the English result on your clipboard. It supports Hebrew and other Unicode text without opening a translation webpage.
+
+Requires **PowerShell 7 and a configured, active Azure Translator account**. Azure may require billing; this repository does not provide a free translation service. Leave the command unchecked if you do not want it. Nothing else here depends on Azure.
+
+### Move and find clipboard items
+
+**[Copy Items as JSON](commands/individual/copy-items-as-json.ini)** — select one or more CopyQ items and run it from the item menu. Copies them as JSON, including their text, formatting, images, and other data. Useful for transferring selected items or inspecting what an item contains. The exported JSON can include private content.
+
+**[Paste Items from JSON](commands/individual/paste-items-from-json.ini)** — rebuilds CopyQ items from JSON produced by **Copy Items as JSON**. It checks the format before importing. It is for this collection's item-export format, not arbitrary JSON from a website.
+
+**[Search All Tabs](commands/individual/search-all-tabs.ini)** — asks for a search pattern and gathers matching items from all tabs into `Search`. Enter a plain word or a regular expression for a more precise match. It replaces the previous Search results each time; the source items remain in their original tabs.
+
+**[Show Frequent](commands/individual/show-frequent.ini)** — opens the Frequent menu. Use the menu command or **Win+Shift+F**. Clipboard Router must be installed to populate the list automatically.
+
+**[Copy and Search on Web](commands/individual/copy-and-search-on-web.ini)** — copies text selected in another application, lets you choose **DuckDuckGo or GitHub**, then opens a search for it. The chosen website receives the search text. No global shortcut is assigned by default.
+
+### Change capitalization
+
+**[To Title Case](commands/individual/to-title-case.ini)** — changes selected text in another application into an English-style title and pastes it back. For example, `a guide to clipboard tools` becomes `A Guide to Clipboard Tools`. Small connecting words stay lowercase where appropriate. It does not remember or restore the original capitalization.
+
+**[Toggle Upper/Lower Case](commands/individual/toggle-upper-lower-case.ini)** — changes selected text to uppercase; if it is already entirely uppercase, changes it to lowercase. It pastes the result back into the application. These basic text tools have no global shortcuts assigned by default.
+
+### Moonlander selected-text tools
+
+These use the separate **[Moonlander Custom Config](https://github.com/YiftahCooper/Moonlander-Custom-Config)** project. Install that companion first: it supplies the scripts and helper that transform selected text, handle reselection, and restore the previous clipboard. The commands here connect to it.
+
+| Command | Default shortcut | What it does |
+|---|---|---|
+| [Moonlander: Smart Title Case](commands/individual/moonlander-smart-title-case.ini) | **F13** | Applies smart title capitalization to selected text. |
+| [Moonlander: Cycle Case](commands/individual/moonlander-cycle-case.ini) | **F19** | Cycles selected text between lower and upper case and reselects the result. |
+| [Moonlander: Transplant Hebrew-English](commands/individual/moonlander-transplant-hebrew-english.ini) | **F22** | Repairs text typed with the wrong Hebrew/English keyboard layout. It maps the keys you pressed; it does not translate the meaning. |
+
+The companion runtime is expected under `%LOCALAPPDATA%\MoonlanderTextTools`. Keep F13, F19, and F22 free of conflicting CopyQ shortcuts.
+
+## How secret protection works
+
+Both protection options check new copies before saving them to CopyQ history.
+
+- **A detected secret on its own:** it is left out of history, with a `SECRET_IGNORED` notification.
+- **Text containing a recognized secret:** the text is saved with that part replaced by `[REDACTED]`, with a `SECRET_REDACTED` notification.
+- **Text with nothing detected:** it is saved normally, without a secret notification.
+
+For example, a block containing `"api_key":"..."` can be saved with the key redacted while an ordinary `"fixtureId":"..."` value stays intact. Password-manager instructions to hide a copied value are also respected.
 
 ### Original paste versus redacted paste
 
-For newly copied text containing a recognized embedded credential:
+**Pasting straight after copying uses the original Windows clipboard.** Secret protection changes what CopyQ saves, not the clipboard you just copied.
 
-| Action | Result |
+Selecting the redacted entry in CopyQ pastes the redacted version instead. Once you copy something else, the old secret cannot be recovered from that entry. CopyQ does not keep a hidden original. Redacted history keeps only sanitized text and any formatting freshly generated from it; original HTML and other formats are discarded so they cannot retain a secret behind the visible text.
+
+### Save an ignored item or redacted original once
+
+Sometimes an ordinary identifier looks like a secret. Eligible ignored items and redacted text show a **clickable Windows notification with the CopyQ icon**.
+
+1. While the same original is still on the clipboard, click the notification's main body.
+2. Confirm that you want to save the original **without redaction**.
+3. It is added to history as a normal plain-text item. You can select and paste it later without confirming again.
+
+With Clipboard Router, the original of a redacted block goes to the same destination as its redacted copy. Ignored standalone values and the standalone protection option save into main history. The redacted entry remains alongside the saved original.
+
+This saves the item **once**. It does not permanently exempt that value: a later external copy is checked again, and the manual save does not contribute to Frequent. The already-saved item remains in history.
+
+Closing or ignoring the notification does nothing. Copying something else invalidates the action; old Notification Centre entries and a CopyQ restart cannot recover it. Certain exclusions cannot be overridden, including password-manager concealment and recognized standalone credentials such as provider-prefixed API keys. A mixed block containing such a key can still offer a confirmed save of its original.
+
+The clickable notification uses **SnoreToast**, already bundled with official Windows CopyQ. No extra notification software or icon download is required. It works independently of CopyQ's notification-style preference. A newer actionable notification invalidates the previous save action. If the helper is unavailable, filtering still works but reports `SAVE_UNAVAILABLE` without a save action.
+
+### Detection limits and false positives
+
+Secret detection uses patterns, not knowledge of which values really grant access. It can miss unfamiliar secrets or mistake an identifier for one.
+
+Bare UUIDs and hexadecimal strings of 32–128 characters are treated as possible keys and excluded. A password-shaped standalone string of **10–150 characters**, with no spaces and a mix of letter cases or digits, can also be excluded. Ordinary words such as `Collegiate`, paths, and version numbers have exceptions. The length limit applies to password guessing; recognized token formats and labelled secrets can be longer.
+
+Inside larger documents, UUIDs and hashes are kept unless they appear in a recognized credential field or format. Normal URLs are also kept, including random-looking IDs. Recognizable URL credentials—such as a password in the address, an `api_key` or `access_token` parameter, or a private Google Calendar feed token—are redacted. A redacted link may no longer work.
+
+Protection applies to **new copies**. It does not clean old history, trash, exports, or backups, and it does not control Windows clipboard history or other clipboard managers. A confirmed unredacted save has the same lifetime as any other stored item and can enter trash or backups. To remove a sensitive stored item immediately, delete it from its tab and from `(trash)` too.
+
+See the [command catalogue](docs/commands/COMMANDS.md) for exact rules, failure messages, and limitations.
+
+## Extra software for optional features
+
+Only install the dependencies for the commands you want.
+
+| Feature | What you need |
 |---|---|
-| Copy, then paste normally with Ctrl+V | Original text from the current Windows clipboard, including the credential. |
-| Select/paste the automatically saved redacted item from CopyQ | Text with the credential permanently replaced by `[REDACTED]`. |
-| Click the redaction notification and explicitly confirm saving the original | A separate unredacted plain-text history entry is added; the redacted entry remains. |
-| Copy something else without explicitly saving the original, then return to the older CopyQ item | Only the redacted version is available; CopyQ has no hidden original to restore. |
-| Select an original you previously confirmed saving | The saved unredacted text is available without another confirmation. |
+| Core sorting, protection, undo, search, and text tools | CopyQ 16. Official Windows CopyQ includes the notification helper. |
+| Setup assistant | PowerShell 7.2 or newer. No Node.js or Pester needed. |
+| Markdown rendering | [Node.js](https://nodejs.org/) and the [marked](https://github.com/markedjs/marked) command-line tool. |
+| Code highlighting | [Python 3](https://www.python.org/downloads/windows/) with [Pygments](https://pygments.org/). |
+| Image text recognition | [Tesseract OCR](https://tesseract-ocr.github.io/tessdoc/Installation.html), including English (`eng`) and Hebrew (`heb`) language data. |
+| Translation | PowerShell 7 and Azure Translator configuration. |
+| Moonlander commands | [Moonlander Custom Config](https://github.com/YiftahCooper/Moonlander-Custom-Config). |
 
-Selecting the redacted item is also the way to share the redacted version immediately. It replaces the current clipboard with that safe history item. There is no new shortcut, vault, clipboard-expiry timer, or recovery of replaced originals. The original can remain on the current Windows clipboard until something replaces it; this feature does not securely erase process memory or control Windows clipboard history/cloud sync, other clipboard tools, or the source application.
+If Node.js or Python is already installed, these are the usual commands to add the corresponding tool:
 
-Whole standalone keys and password-manager concealment metadata continue to be **excluded** from history, with `SECRET_IGNORED`. Mixed documents instead receive `SECRET_REDACTED`. Recognized embedded forms include supported provider-prefixed tokens, structurally valid JWTs, private-key PEM blocks, authorization headers, and explicit password/token/secret/API-key assignments. Generic mixed-case words and unlabeled hashes inside documents are not guessed to be secrets.
+```powershell
+npm install -g marked
+python -m pip install Pygments
+```
 
-Generic standalone-password guessing applies only to 10–150 characters without whitespace and with at least two of lowercase letters, uppercase letters and digits, subject to the existing URL/path/version exceptions. Initial capitalization alone is not enough: alphabetic words with one uppercase initial followed by lowercase letters, such as `Collegiate`, are retained (as are ordinary all-lowercase and all-uppercase words). This is a shape rule, not a dictionary lookup; an unlabeled password with that same word shape can also be retained. Explicit credential patterns and password-manager concealment metadata still take precedence.
+Run the command for the feature you want in your normal terminal. Pygments must be installed in the Python interpreter used by `py -3` or `python.exe`. OCR looks for Tesseract in its standard Program Files location or on `PATH`.
 
-Bare hexadecimal strings of 32–128 characters and bare UUID-shaped values (`8-4-4-4-12` hexadecimal groups) are excluded: this intentionally favours protection over retaining an ambiguous standalone checksum or identifier. UUIDs inside ordinary documents or normal URL paths/query values remain intact unless they occur in a recognized credential context, such as an `api_key` field. Valid JSON objects and arrays are not treated as one password, even when compact; their contents are still scanned for recognized embedded credentials. The 150-character cap does not disable recognition of longer provider tokens, private keys or explicitly labelled credentials. Unchanged documents produce no secret notification; `SECRET_REDACTED` reports a replacement, not a guarantee that every possible secret was found. These checks apply to new clipboard events; installing an update does not scan or remove previously saved history.
+From the repository folder, this optional report checks the installed tools without changing anything:
 
-Ordinary URLs remain intact, including random-looking paths, IDs, and query values. Exceptions are recognizable credential forms: a password in URL user information, explicitly named `access_token`, `api_key`/`apikey`/`api-key`, `password`, `secret`, or `token` parameters, and private Google Calendar ICS feed tokens. Only the credential component is replaced. A redacted credential URL is for reference/sharing and may no longer work.
+```powershell
+pwsh -NoProfile -File .\scripts\Test-Dependencies.ps1
+```
 
-When redaction is needed, the history payload discards **all original alternate formats**, including HTML, RTF, image and custom data, not just the visible secret. Later renderers may generate fresh HTML from the sanitized text. The original rich formatting remains available through immediate ordinary paste, but it cannot be recovered from the saved history item. Redacted items are excluded from frequency counting. Undo can restore the redacted item, never its removed credential.
+### Optional Azure setup
 
-For a harmless acceptance test, copy `Please use ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa for this request`. Paste directly into a disposable editor: expect the original. Then choose the new item from CopyQ: expect `Please use [REDACTED] for this request`. Repeat using the mouse copy action and a website copy button with **synthetic data only**. A browser/mouse-specific live result still needs this check; automated tests do not operate your physical devices.
-
-## What is included
-
-| Area | Commands |
-|---|---|
-| Clipboard automation | Clipboard Router; Move to Trash (Undoable); Undo Delete; Remove Background and Text Colors |
-| Rendering and extraction | Render Markdown; Highlight Code; Copy Text in Image |
-| Translation | Translate to English |
-| Data and search | Copy Items as JSON; Paste Items from JSON; Search All Tabs; Copy and Search on Web |
-| Text tools | To Title Case; Toggle Upper/Lower Case; Show Frequent |
-| Moonlander | Moonlander: Smart Title Case; Moonlander: Cycle Case; Moonlander: Transplant Hebrew-English |
-
-The [full catalogue](docs/commands/COMMANDS.md) explains activation, dependencies, privacy, strengths, and limitations for every command and links every individual INI.
-
-## Optional dependencies
-
-| Feature | Dependency |
-|---|---|
-| Core commands | CopyQ 16; clickable secret notifications use its bundled `snoretoast.exe` on Windows |
-| Render Markdown | `marked` (`npm install -g marked`) |
-| Highlight Code | Python 3 and Pygments (`python -m pip install Pygments`) |
-| Copy Text in Image | Tesseract OCR with Tesseract eng and Tesseract heb language data |
-| Translate to English | PowerShell 7 and Azure Translator |
-| Moonlander commands | [Moonlander Custom Config](https://github.com/YiftahCooper/Moonlander-Custom-Config) |
-
-`Test-Dependencies.ps1` is read-only. It reports what is available but never installs packages, changes `PATH`, requests elevation, or reads an Azure key.
-
-OCR is entirely local and does not require Azure. It finds Tesseract in its
-standard Program Files location or an existing executable in `PATH`. Select a
-PNG and run **Copy Text in Image**, then paste into a text editor: the image stays
-in history while recognized text replaces the clipboard. Code highlighting uses
-an explicit Python lexer for recognizable Python declarations and language
-guessing for other snippets; ambiguous snippets can still be misidentified.
-
-## Azure translation setup
-
-Translation is optional and sends selected text to Azure. Separately installed community URL enrichment can fetch copied addresses automatically. Create an Azure Translator resource, note its region, then run:
+Create an Azure Translator resource and note its region. In the setup assistant, use **Configure Azure**, or run this from the repository folder, replacing the example region with yours:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\Install-CopyQTranslation.ps1 -Region germanywestcentral
 ```
 
-The script copies three helper files beneath `%LOCALAPPDATA%\CopyQCommandSuite\translation`, prompts for the key using a secure input field, protects it for the current Windows user with DPAPI, and stores the non-secret region separately. The key, source text, translation, and Azure response are not logged or placed in this repository.
+The helper asks for your key securely and stores it encrypted for your Windows account under `%LOCALAPPDATA%\CopyQCommandSuite\translation`. Keep keys out of this repository. On another PC or Windows account, configure the key again. The service must be active; a stored key does not mean Azure will accept it.
 
-After configuration, select a text item in CopyQ and run **Translate to English** from the context menu. The translated English text becomes the clipboard content.
+## Credits and license
 
-## Moonlander integration
+This collection builds on **CopyQ**, created and maintained by **Lukáš Holecek (`hluk`) and its contributors**, and ideas from the official [CopyQ commands repository](https://github.com/hluk/copyq-commands).
 
-The three CopyQ command wrappers are included here, but their transaction scripts and reselection helper belong to [YiftahCooper/Moonlander-Custom-Config](https://github.com/YiftahCooper/Moonlander-Custom-Config). Install that companion project first. The wrappers resolve it from `%LOCALAPPDATA%\MoonlanderTextTools` and retain exclusive ownership of:
+Distributed commands are original work or independent rewrites. In particular, the undo pair was inspired by `hluk`'s [Undoable Move to Trash](https://github.com/hluk/copyq-commands/blob/master/commands/undoable-move-to-trash.ini). Other community commands used alongside this setup are linked to their original sources rather than copied here.
 
-- F13 — Moonlander: Smart Title Case
-- F19 — Moonlander: Cycle Case
-- F22 — Moonlander: Transplant Hebrew-English
+The [credits page](docs/CREDITS.md) lists original command links, known contributors, notification tooling, and the Moonlander companion. This repository is licensed under **GPL-3.0-only**; see [LICENSE](LICENSE).
 
-If those keys are already assigned to other CopyQ commands, resolve the collision before importing the Moonlander bundle.
+## For contributors
 
-## Privacy and failure behaviour
+Each command has its own source file. The ready-to-import `.ini` files include the code they need, so installed core commands do not depend on this checkout. External tools and the Moonlander companion are still needed for their respective features.
 
-- Clipboard Router excludes standalone secrets (`SECRET_IGNORED`) and permanently redacts recognized credentials in mixed text (`SECRET_REDACTED`) before saving it. Notifications contain reason codes, not copied content.
-- Secret checks precede image/owner passthrough, and a notification failure cannot skip suppression. Private Google Calendar ICS capability links are sensitive URLs; public feeds, normal addresses, and local/file URLs are not automatically secrets.
-- Detection is heuristic: unfamiliar, unlabeled or encoded secrets can still escape it, and explicit credential-like labels can produce false positives. This is not encryption, a guaranteed secret detector, or retroactive cleanup of old history, trash, exports or backups. If rewriting the history payload fails, the item is excluded and `SECRET_REDACTION_FAILED` is reported.
-- Substantial JSON, command blocks, transcripts, logs, stack traces, diffs, and configuration blocks route to `Artifacts`; short commands, standalone paths, `git status`, and ordinary prose stay in the normal history.
-- Eligible text from normal history, `&URLs`, `BIG`, `Artifacts`, and `Code` is counted independently of its primary tab. On copy six, a trimmed text-only copy is added to `Frequent`; the primary item remains where it belongs.
-- Frequency state stores at most 4,096 dual-hash counters and recency values, not copied text. Leading and trailing whitespace do not create separate counters.
-- Deletion moves complete items into `(trash)` and `Ctrl+Z` in the CopyQ window restores the newest removal batch. Entries at least 30 days old are pruned at startup and before another deletion, not by a timer; they can remain longer while CopyQ is idle. Trash also inherits your configured tab item limit (110 in the author's setup), which can evict entries sooner. Delete sensitive material from `(trash)` as well when immediate permanent removal is required.
-- Markdown, highlighting, and OCR run locally.
-- Azure receives only text explicitly sent through Translate to English.
-- Missing tools leave the current clipboard item intact and report bounded codes such as `MARKDOWN_FAILED`, `PYGMENTS_FAILED`, `OCR_FAILED`, or `TRANSLATE_NOT_CONFIGURED`.
-- Generated exports and public files are scanned for local home paths, credentials, backups, and private configuration.
+Normal users can use the committed command files without building anything. To build or test changes, see the [architecture and contribution guide](docs/ARCHITECTURE.md). Builds require Windows, CopyQ **16.0.0**, PowerShell 7, Node.js with npm, and the documented test dependencies, including Pester **3.4.0** for PowerShell tests. Use the [documented scratch layout](docs/ARCHITECTURE.md#disposable-verification-storage) for disposable verification files.
 
-## Build and test
-
-Building is optional: normal users can import the committed INIs. To build and test, use Windows, a normal-user **PowerShell 7** session in the repository root, Node.js with npm, Git for Windows, and **CopyQ 16.0.0**. The exporter deliberately requires that exact CopyQ version for repeatable output. The tested toolchain uses Node 24 and Pester **3.4.0**; the Pester 5 assertion syntax is not interchangeable. Install or make Pester 3.4.0 available before running the test block. OCR/Pygments tests also require the dependencies listed above; Azure tests use synthetic credentials and mocked HTTP responses, not a live subscription.
-
-The committed INI files are generated from the JavaScript command model through one isolated CopyQ session. Run each step only if the preceding step succeeds:
-
-```powershell
-npm test
-npm run build
-Import-Module Pester -RequiredVersion 3.4.0
-$copyqTests = Invoke-Pester .\tests -PassThru
-if ($copyqTests.FailedCount) { throw 'CopyQ tests failed' }
-```
-
-For project-local disposable storage, use `.backup-scratch/` and the
-[scratch verification layout](docs/ARCHITECTURE.md#disposable-verification-storage).
-
-Expect zero failures. The build creates eighteen integrated individual exports, one standalone protection alternative, and three bundles; it imports every result back into the isolated session and never connects to or modifies the normal CopyQ session. Tests use disposable settings and item storage. A failed test is a stop condition, not permission to activate the candidate; after correcting its cause, rerun the failed test step. Rebuilding rewrites generated INIs and is safe to repeat; it does not install commands into your live setup.
-
-## Community commands
-
-Several excellent commands used alongside this collection come from [`hluk/copyq-commands`](https://github.com/hluk/copyq-commands). They are not distributed here. See [credits and recommended community commands](docs/CREDITS.md) for direct source links and contributor attribution.
-
-In particular, **Move to Trash (Undoable)** and **Undo Delete** are independent implementations inspired by `hluk`'s maintained [Undoable Move to Trash](https://github.com/hluk/copyq-commands/blob/master/commands/undoable-move-to-trash.ini). This suite adds private batch metadata, lazy 30-day cleanup, complete-item restoration, and integration with the Frequent counter; it does not republish the upstream command body.
-
-## License
-
-This project is licensed under `GPL-3.0-only`; see [LICENSE](LICENSE). CopyQ is a separate GPL-licensed project. Referenced community commands remain governed by their respective upstream repositories and are not included here.
+Further reading: [command catalogue](docs/commands/COMMANDS.md) · [setup and recovery](docs/SETUP.md) · [credits](docs/CREDITS.md) · [architecture](docs/ARCHITECTURE.md) · [changelog](CHANGELOG.md).

@@ -138,6 +138,29 @@ Run `npm test`, `npm run build`, and the PowerShell tests. Tests execute feature
 modules directly and in generated CopyQ code, exercise actual isolated tab
 storage, and check that unrelated helpers are absent from narrow imports.
 
+Use Windows and a normal-user PowerShell 7 session in the repository root.
+The exporter requires CopyQ **16.0.0** for repeatable output. The tested toolchain
+uses Node 24 with npm, Git for Windows, and Pester **3.4.0**; Pester 5 assertion
+syntax is not interchangeable. OCR and highlighting tests need their external
+tools. Translation tests use synthetic credentials and mocked HTTP responses,
+not a live Azure subscription.
+
+Run each step only after the preceding step succeeds:
+
+```powershell
+npm test
+npm run build
+Import-Module Pester -RequiredVersion 3.4.0
+$copyqTests = Invoke-Pester .\tests -PassThru
+if ($copyqTests.FailedCount) { throw 'CopyQ tests failed' }
+```
+
+The build generates 18 individual commands, one standalone protection
+alternative, and three bundles. It imports the generated files back into an
+isolated CopyQ session to check them. Building does not install commands into
+the normal CopyQ session. Repeating a build rewrites the generated exports;
+resolve failed tests before activating or publishing changes.
+
 For command backups, use CopyQ's native **Save Commands** / **Load Commands**
 format. A naive `JSON.stringify(commands())` round-trip loses regular-expression
 fields and is not an equivalent backup. Never edit live configuration files while
