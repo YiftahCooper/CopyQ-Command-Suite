@@ -15,9 +15,24 @@ There are **18 commands**, available separately or in bundles, plus a secret-pro
 
 ## Install with the setup assistant
 
-This is the easiest way to choose commands, update an existing setup, and check that installation succeeded.
+**The setup assistant is optional and exists only for convenience.** You can install the same commands manually using CopyQ's built-in import dialog. The commands do not need the assistant afterward; you can close it when setup finishes.
+
+It makes choosing commands, updating an existing setup, and checking the result easier.
 
 You need **CopyQ 16.0.0** running and [PowerShell 7.2 or newer](https://github.com/PowerShell/PowerShell). Run setup from your normal Windows account, without administrator mode.
+
+### Why the assistant is designed to be safe
+
+Its safeguards are visible in the source:
+
+- **Ordinary user access:** the [launcher](CopyQ-Setup.cmd) runs the local PowerShell script, and the [setup script](scripts/Setup-CopyQ.ps1) refuses administrator mode. It does not bypass PowerShell's execution policy or download software.
+- **You approve the changes:** preview lists the selected updates and any protection conflict before installation. The [command planner](scripts/setup/command-plan.js) preserves unrelated commands; unchecked commands stay installed.
+- **A backup before changes, a check afterward:** the [installation code](modules/CopyQ.Setup.psm1) saves the old command definitions first, checks that they have not changed since preview, then reads the installed definitions back to confirm the result. **Restore commands** can recover that backup without overwriting later edits.
+- **No clipboard-history access during setup:** the [CopyQ bridge](scripts/setup/bridge.js) imports and exports command definitions, not clipboard items. Setup does not change your CopyQ preferences or add a startup service. Azure configuration is a separate action you explicitly choose.
+
+The [installer tests](tests/setup-host.Tests.ps1) exercise installation, repeat installation, preservation of unrelated commands, rollback, and refusal to overwrite later edits. Installed commands still perform their own documented actions—for example, sorting new copies or cleaning expired trash.
+
+### Installation steps
 
 1. Download this repository using GitHub's **Code → Download ZIP**, then extract it. A complete Git checkout also works. Keep the folder together: the launcher needs the files beside it.
 2. Double-click **[CopyQ-Setup.cmd](CopyQ-Setup.cmd)** in that folder.
