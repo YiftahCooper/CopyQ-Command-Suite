@@ -56,6 +56,13 @@ service or polling timer is added.
 
 The worker resolves `snoretoast.exe` beside `info('exe')`, uses the existing
 `copyq` app identity and a short toast, and accepts only body-click exit code 0.
+It reads CopyQ's embedded `:/images/logo.png` into a unique temporary PNG and
+passes that file with SnoreToast's `-p` option. Only public icon bytes are written,
+never clipboard content. The file is closed before delivery and removed after
+the helper returns, including dismissal, expiry or failure; Qt also provides
+automatic removal when the temporary-file object is destroyed. If extracting
+the icon fails, the native notification still works with the helper's default
+image. The standalone and integrated commands share this implementation.
 Codes 1/2/3 do nothing. Missing helpers and errors leave protection intact and
 report `SAVE_UNAVAILABLE`. Only generic notification text and a random ID reach
 the helper. `secret_notification_current` holds only the latest random ID:
@@ -135,3 +142,19 @@ For command backups, use CopyQ's native **Save Commands** / **Load Commands**
 format. A naive `JSON.stringify(commands())` round-trip loses regular-expression
 fields and is not an equivalent backup. Never edit live configuration files while
 CopyQ is running.
+
+### Disposable verification storage
+
+Use `.backup-scratch/` for generated test/build state. Set `TEMP` and `TMP` to
+its absolute path only in the verification shell and its child processes, never
+in system settings. For installer integration tests, copy the files listed in
+`PUBLIC-FILES.txt`, preserving relative paths, into a fresh child directory such
+as `.backup-scratch/test-package/`, then run its PowerShell tests. Keep `TEMP`
+and `TMP` at the parent scratch directory: installer state must remain outside
+the package under test. Node tests run from the real Git checkout.
+
+The package copy and runtime data are regenerable from the public allowlist and
+the documented build/test commands. Retain source, deliberate fixtures and the
+generated distribution in their normal repository locations. Scratch is ignored
+by Git, but its exclusion from backups must be checked separately; this project
+does not configure backup software.

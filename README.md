@@ -149,7 +149,9 @@ history lifetime and can subsequently appear in trash, exports or backups. The
 confirmation does not show the value; it refers to the still-current clipboard.
 
 Clickable notifications use **SnoreToast**, bundled with the official Windows
-CopyQ installation. No additional software or administrator access is needed.
+CopyQ installation, and display CopyQ's own icon. The image comes from CopyQ's
+embedded resources; no icon download or separate asset installation is needed.
+No additional software or administrator access is needed.
 The short-lived toast respects Windows notification delivery settings. A newer
 actionable notice invalidates the previous action, though an older toast can
 remain briefly visible during rapid copying. Use the live notification: old
@@ -279,6 +281,9 @@ Import-Module Pester -RequiredVersion 3.4.0
 $copyqTests = Invoke-Pester .\tests -PassThru
 if ($copyqTests.FailedCount) { throw 'CopyQ tests failed' }
 ```
+
+For project-local disposable storage, use `.backup-scratch/` and the
+[scratch verification layout](docs/ARCHITECTURE.md#disposable-verification-storage).
 
 Expect zero failures. The build creates eighteen integrated individual exports, one standalone protection alternative, and three bundles; it imports every result back into the isolated session and never connects to or modifies the normal CopyQ session. Tests use disposable settings and item storage. A failed test is a stop condition, not permission to activate the candidate; after correcting its cause, rerun the failed test step. Rebuilding rewrites generated INIs and is safe to repeat; it does not install commands into your live setup.
 

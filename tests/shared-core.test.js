@@ -197,7 +197,7 @@ test("generated commands use real conceal MIME values and safe operational comma
   assert.match(frequency, /ItemSelection\('Frequent'\)/);
   assert.match(frequency, /setItemAtIndex/);
   assert.match(frequency, /\.move\(0\)/);
-  assert.doesNotMatch(frequency, /remove\(/);
+  assert.doesNotMatch(frequency.slice(frequency.indexOf("var frequency = null")), /remove\(/);
   assert.equal(frequency.indexOf("CopyQCore.recordFrequency") < frequency.indexOf("setData(mimeOutputTab, 'BIG')"), true);
   assert.equal(frequency.indexOf("CopyQCore.recordFrequency") < frequency.indexOf("setData(mimeOutputTab, 'Artifacts')"), true);
   assert.equal(frequency.indexOf("CopyQCore.recordFrequency") < frequency.indexOf("setData(mimeOutputTab, 'Code')"), true);

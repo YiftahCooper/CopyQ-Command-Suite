@@ -19,6 +19,23 @@ function nativeSecretNotice(request) {
       try { execute(helper, '-appID', 'copyq', '-close', id); } catch (e) {}
     }
   }
+  function notificationIcon() {
+    // Reuse the PNG embedded in CopyQ itself; no download or extra asset install.
+    var source = new File(':/images/logo.png');
+    var file;
+    try {
+      if (!source.openReadOnly()) return null;
+      file = new TemporaryFile(Dir().tempPath() + '/copyq-toast-XXXXXX.png');
+      if (!file.open() || file.write(source.readAll()) !== source.size()) throw new Error('ICON_WRITE_FAILED');
+      file.close(); // The external helper must be able to read the complete PNG.
+      return file;
+    } catch (e) {
+      if (file) { try { file.remove(); } catch (ignored) {} }
+      return null; // Cosmetic failure must not disable protection or saving.
+    } finally {
+      source.close();
+    }
+  }
   var helper;
   try {
     if (!current()) return;
@@ -32,12 +49,16 @@ function nativeSecretNotice(request) {
     close(request.previous);
     if (!current()) return;
     var result;
+    var icon = notificationIcon();
     try {
-      result = execute(helper, '-appID', 'copyq', '-id', request.id,
+      var args = [helper, '-appID', 'copyq', '-id', request.id,
         '-t', request.reason === 'SECRET_IGNORED' ? 'Secret excluded from history' : 'Secrets removed from history',
-        '-m', request.reason + '\nClick to save the current original once...', '-d', 'short', '-silent');
+        '-m', request.reason + '\nClick to save the current original once...', '-d', 'short', '-silent'];
+      if (icon) args.push('-p', str(icon.fileName()));
+      result = execute.apply(null, args);
     } finally {
       close(request.id);
+      if (icon) { try { icon.remove(); } catch (ignored) {} }
     }
     if (!current()) return;
     if (result && result.exit_code === 0) saveProtectedClipboardOnce(request.expected, current, request.destination);

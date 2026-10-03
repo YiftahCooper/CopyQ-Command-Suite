@@ -1,4 +1,5 @@
 # Private and generated release state
+.backup-scratch/
 _local/
 .build/
 .agents/

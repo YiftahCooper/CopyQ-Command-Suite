@@ -279,12 +279,12 @@ setData(mimeText,raw);setData(mimeHtml,'<b>'+raw+'</b>');setData(mimeOutputTab,'
 if(runAutomaticCommands())saveData();
 var worker=str(settings('test_notice_code')).replace(/^copyq:\s*/,'');
 settings('test_worker_result','');
-var prelude='var cleanInput=str(input())==="" && str(data(mimeText))==="";var confirmations=0;var calls=[];var raw='+JSON.stringify(raw)+';'+
+var prelude='var cleanInput=str(input())==="" && str(data(mimeText))==="";var confirmations=0;var calls=[];var iconPath="";var iconValid=false;var raw='+JSON.stringify(raw)+';'+
 'var clipboard=function(format){return format==="?"?"text/plain\\n":raw;};'+
-'var execute=function(){calls.push(Array.prototype.slice.call(arguments));return {exit_code:arguments[3]==="-close"?0:EXIT_CODE};};'+
+'var execute=function(){var args=Array.prototype.slice.call(arguments);calls.push(args);var p=args.indexOf("-p");if(p>=0){iconPath=str(args[p+1]);var f=new File(iconPath);var source=new File(":/images/logo.png");iconValid=f.openReadOnly() && source.openReadOnly() && str(sha256sum(f.readAll()))===str(sha256sum(source.readAll())) && source.size()>0;f.close();source.close();}return {exit_code:arguments[3]==="-close"?0:EXIT_CODE};};'+
 'var dialog=function(){confirmations++;return true;};var notification=function(){};'+
 'var old=config("clipboard_tab");config("clipboard_tab","Native Saved Test");tab("Native Saved Test");var mainBefore=size();tab("Artifacts");var before=size();';
-var ending='tab("Native Saved Test");var mainAdded=size()-mainBefore;tab("Artifacts");settings("test_worker_result",JSON.stringify({cleanInput:cleanInput,confirmations:confirmations,added:size()-before,mainAdded:mainAdded,text:str(read(mimeText,0)),redacted:str(read(mimeText,confirmations?1:0)),calls:calls}));config("clipboard_tab",old);';
+var ending='tab("Native Saved Test");var mainAdded=size()-mainBefore;tab("Artifacts");settings("test_worker_result",JSON.stringify({cleanInput:cleanInput,iconValid:iconValid,iconRemoved:iconPath!=="" && !(new File(iconPath)).exists(),confirmations:confirmations,added:size()-before,mainAdded:mainAdded,text:str(read(mimeText,0)),redacted:str(read(mimeText,confirmations?1:0)),calls:calls}));config("clipboard_tab",old);';
 testRealAction('copyq:\n'+prelude+worker+'\n'+ending);
 'SCHEDULED';
 '@
@@ -298,6 +298,8 @@ testRealAction('copyq:\n'+prelude+worker+'\n'+ending);
             }
             $result | Should Not BeNullOrEmpty
             $result.cleanInput | Should Be $true
+            $result.iconValid | Should Be $true
+            $result.iconRemoved | Should Be $true
             $result.confirmations | Should Be ([int]($exitCode -eq 0))
             $result.added | Should Be ([int]($exitCode -eq 0))
             $result.mainAdded | Should Be 0

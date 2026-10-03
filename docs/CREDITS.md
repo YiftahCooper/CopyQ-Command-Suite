@@ -59,6 +59,10 @@ version 0.9.1). Neither SnoreToast source nor its executable is redistributed by
 this repository. The integration does not copy an upstream command body or
 introduce a separate service.
 
+The notification image is CopyQ's own logo, read from the installed application's
+embedded resources ([CopyQ 16 resource declaration](https://github.com/hluk/CopyQ/blob/v16.0.0/src/copyq.qrc)).
+The suite does not redistribute or replace that artwork.
+
 ## Moonlander companion project
 
 The three Moonlander CopyQ wrappers integrate with [YiftahCooper/Moonlander-Custom-Config](https://github.com/YiftahCooper/Moonlander-Custom-Config). That repository supplies the clipboard transaction scripts, transformations, installer, and reselection executable; none of those runtime files are duplicated here.

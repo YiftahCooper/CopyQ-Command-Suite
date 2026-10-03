@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use CopyQ's embedded logo for native clickable secret notifications instead of SnoreToast's default image. Share the icon handling across both protection options, clean up the temporary image after delivery, and keep notifications functional if the image is unavailable.
+
 - Preserve Clipboard Router's primary destination when a notification-confirmed save adds an unredacted original. Artifacts, code, large text and URLs stay in their routed tabs; standalone protection and ignored standalone values continue to use main history. No reclassification or frequency counting is performed by the save.
 
 - Retain ordinary initially capitalized words such as Collegiate instead of guessing they are passwords. Exclude bare UUID-shaped values as possible API keys while preserving unlabeled UUIDs inside documents and ordinary URLs. Add core, notification and isolated history-storage regressions.

@@ -110,11 +110,27 @@ function runNativeWorker(options = {}) {
   assert.equal(dispatched.actions.length, 1, 'native worker must be scheduled');
   const saved = []; const savedTabs = []; const calls = []; const notices = []; let confirmations = 0; let reads = 0;
   let selected = 'Original';
+  const iconBytes = Buffer.from('synthetic icon bytes');
+  let iconWritten; let iconRemoved = false;
   const state = dispatched.state;
   const context = {
     str: String, mimeText: 'text/plain', mimeOwner: 'owner', mimeHidden: 'hidden',
     info: (key) => { assert.equal(key, 'exe'); return 'D:/Portable Tools/CopyQ/copyq.exe'; },
-    File: function (path) { this.exists = () => !options.missingHelper; },
+    File: function (path) {
+      this.exists = () => !options.missingHelper;
+      this.openReadOnly = () => path === ':/images/logo.png' && !options.missingIcon;
+      this.readAll = () => iconBytes;
+      this.size = () => iconBytes.length;
+      this.close = () => {};
+    },
+    Dir: function () { return { tempPath: () => 'D:/Temporary Files' }; },
+    TemporaryFile: function () {
+      this.open = () => !options.iconWriteFails;
+      this.write = (bytes) => { iconWritten = bytes; return bytes.length; };
+      this.close = () => {};
+      this.fileName = () => 'D:/Temporary Files/copyq-toast-123.png';
+      this.remove = () => { iconRemoved = true; return true; };
+    },
     settings: (key, value) => {
       if (value !== undefined) state[key] = value;
       const result = state[key] || '';
@@ -124,6 +140,10 @@ function runNativeWorker(options = {}) {
     execute: (...args) => {
       calls.push(args);
       if (args.includes('-close')) return { exit_code: 0, stdout: '', stderr: '' };
+      if (args.includes('-p')) {
+        assert.equal(iconWritten, iconBytes, 'write CopyQ resource bytes, not clipboard content');
+        assert.equal(iconRemoved, false, 'icon must exist until helper exits');
+      }
       if (options.newerNotice) state.secret_notification_current = 'newer-notification';
       if (options.failure) throw Error('synthetic launch error');
       return { exit_code: options.exitCode === undefined ? 0 : options.exitCode, stdout: '', stderr: '' };
@@ -138,8 +158,29 @@ function runNativeWorker(options = {}) {
     insert: (row, item) => { saved.push(item); savedTabs.push(selected); },
   };
   vm.runInNewContext(dispatched.actions[0].replace(/^copyq:\s*/, ''), context);
-  return { saved, savedTabs, selected, calls, confirmations, notices, state, primaryTab: dispatched.values['output-tab'] };
+  return { saved, savedTabs, selected, calls, confirmations, notices, state, iconRemoved, primaryTab: dispatched.values['output-tab'] };
 }
+
+test('native notices use the installed CopyQ icon and clean it up on click, dismissal, timeout and error', () => {
+  for (const command of [buildCandidate().commands[0], buildSecretProtection()]) {
+    for (const options of [{}, { exitCode: 2 }, { exitCode: 3 }, { failure: true }]) {
+      const result = runNativeWorker({ command, ...options });
+      const launch = result.calls.find(args => args.includes('-t'));
+      assert.ok(launch.includes('-p'), 'supply the CopyQ image instead of the SnoreToast default');
+      assert.equal(launch[launch.indexOf('-p') + 1], 'D:/Temporary Files/copyq-toast-123.png');
+      assert.equal(result.iconRemoved, true);
+      assert.equal(result.saved.length, options.exitCode || options.failure ? 0 : 1);
+    }
+  }
+});
+
+test('unavailable icon does not disable native notifications or confirmed saving', () => {
+  for (const options of [{ missingIcon: true }, { iconWriteFails: true }]) {
+    const result = runNativeWorker(options);
+    assert.equal(result.calls.find(args => args.includes('-t')).includes('-p'), false);
+    assert.equal(result.saved.length, 1);
+  }
+});
 
 test('router confirmation preserves the redacted item destination, while standalone saves use main history', () => {
   const router = buildCandidate().commands[0];
