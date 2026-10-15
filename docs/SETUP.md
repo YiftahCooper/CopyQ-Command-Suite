@@ -52,28 +52,43 @@ repository/release. There is no download-and-execute pipeline or telemetry.
 
 1. Double-click **CopyQ-Setup.cmd**. The console remains available for secure
    Azure input if you explicitly choose that operation.
-2. Choose Essentials, All general tools, Protection only, or individual checkboxes.
-   Undo automatically includes its partner. Show Frequent requires the router.
-   Router and standalone protection are mutually exclusive.
-   For a single-command update, click **Uncheck all**, then check only that
-   command. This clears selection, not installed commands or shortcut edits.
-3. Optionally load a saved JSON profile. Profiles from another package can be
-   loaded, but preview warns that this package's commands will be used.
-4. Edit shortcuts only if needed. Blank keeps the packaged default, `-` clears
-   it, and semicolons separate multiple shortcuts. `Meta` means the Windows key.
-5. Click **Preview changes**. Same-identity selected commands are replaced,
-   including local edits; the preview names the affected identities. Unselected
-   existing commands remain installed. This is not an uninstall selector.
-   `missingDependencies` lists any prerequisites that still need attention.
-   Installation is blocked until these are prepared or their commands are
-   deselected. Dependencies are checked again immediately before mutation.
-6. Click **Install selected**, read the confirmation and approve it. The assistant
+2. Nothing is selected initially. Check the commands to install or update;
+   the separate **Installed** column shows what you already have. Each row
+   includes a short description. Use **Select installed commands** to select
+   existing suite commands for update, or **Advanced** for an explicit preset.
+   Unchecked commands stay installed and unchanged. **Uncheck all** only clears
+   the checkboxes; it does not clear shortcut edits or uninstall anything.
+3. Existing shortcuts are retained automatically. Open **Advanced** to edit them
+   or load/save a profile. Shortcut override fields start blank: blank keeps the
+   current shortcut (or package default for a new command). Hover over a field
+   to see the current value; enter a value only to change it. `-` clears it, and
+   semicolons separate multiple shortcuts. Each review reads current settings.
+   `Meta` means the Windows key. Profiles from another package are allowed, but
+   review warns that the commands come from the current package.
+4. Click **Review changes**. The **Summary** names commands to add or update,
+   explains required partners, gives the preserved-command count, and lists
+   missing tools or restart requirements. Undo includes its partner; Show
+   Frequent includes the router. Router and standalone protection are mutually
+   exclusive. Selected command bodies replace local edits. Changing a checkbox
+   or shortcut invalidates the review and disables installation until reviewed
+   again. Missing prerequisites block installation; prepare them or uncheck the
+   affected command. **Already up to date** means no installation is needed.
+5. Click **Install / update**, read the confirmation and approve it. The assistant
    backs up command definitions only, applies the selected updates, and reads
    the installed definitions back. A conflicting protection handler is removed
    only as disclosed in the confirmation. Protection is placed first.
-7. If script commands such as the undo listener changed, exit CopyQ completely
-   and start it again. Click **Verify** afterward. This restart is explicit: the
-   installer does not interrupt an active CopyQ editor or unsaved work.
+6. Installation checks run automatically. The result clearly says that checks
+   passed, that a restart is required, or that the installation needs attention.
+   If the Undo listener was actually added or updated, exit CopyQ completely and
+   start it again before using Undo. Rechecking definitions is not proof that an
+   event listener is active. The assistant never closes CopyQ for you.
+7. Try the chosen features with disposable text or images. These real operations
+   are not proved by the automatic definition/dependency checks.
+
+No JSON interpretation is required. **Technical details** retains diagnostic
+fields; **Advanced** holds presets, profiles, shortcut editing, Azure configuration,
+recovery, and **Check installation again**. If post-install checking failed or
+timed out, this action rechecks the last installation without applying it again.
 
 Each operation normally takes seconds. Errors stop the operation and appear in
 the status area; do not interpret a missing dependency as a working feature.
@@ -82,14 +97,14 @@ account before retrying a connection failure.
 
 ### Update other commands while leaving translation alone
 
-For a router-only update, **Uncheck all** → **Clipboard Router** → **Preview
-changes** → **Install selected** is sufficient. **Read installed selection** is
-optional; use it first if you want to retain installed shortcut customizations,
-then use **Uncheck all** without losing the loaded shortcut values.
+For a router-only update, check **Clipboard Router** → **Review changes** →
+**Install / update**. Use **Uncheck all** first only if you have other boxes
+checked. Installed shortcut customizations are retained automatically.
 
-Click **Read installed selection**, then uncheck **Translate to English** before
-previewing. Alternatively, load a profile that excludes `canonical.translate-en`.
-Leave **Configure Azure** alone. An unchecked translation command is preserved
+For a larger update, use **Select installed commands**, then uncheck
+**Translate to English** before reviewing. Alternatively, load an Advanced
+profile that excludes `canonical.translate-en`. Leave **Advanced → Configure
+Azure** alone. An unchecked translation command is preserved
 exactly as installed; it is not updated, disabled or removed. Its credentials and
 region are not changed, and missing Azure prerequisites do not block the other
 selected commands. This does not repair an unavailable translation service.
@@ -98,6 +113,9 @@ Keep existing working Moonlander commands unchecked too if you only want to
 update the general tools. Their command definitions and shortcuts are preserved.
 
 ## What verification proves
+
+The Summary translates these checks into plain language. The following field
+names are only for the optional Technical details view and CLI output.
 
 - `definitionsVerified`: selected command bodies, fields, shortcuts, ordering
   and preservation of unselected commands match the planned native export.
@@ -149,7 +167,7 @@ from your normal Windows account using disposable text.
 ## Your reusable profile and personal command backup
 
 **Save profile** saves the selected suite identities, shortcut overrides, package
-digest and optional nonsecret Azure region. **Read installed selection** loads
+digest and optional nonsecret Azure region. **Select installed commands** loads
 the suite commands and shortcuts actually present in CopyQ; then save the profile.
 The three original Moonlander wrappers without suite IDs are recognized by their
 exact names, expected F13/F19/F22 shortcuts and known wrapper code. Discovery is

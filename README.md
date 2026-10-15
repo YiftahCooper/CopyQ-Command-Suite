@@ -36,29 +36,32 @@ The [installer tests](tests/setup-host.Tests.ps1) exercise installation, repeat 
 
 1. Download this repository using GitHub's **Code → Download ZIP**, then extract it. A complete Git checkout also works. Keep the folder together: the launcher needs the files beside it.
 2. Double-click **[CopyQ-Setup.cmd](CopyQ-Setup.cmd)** in that folder.
-3. Choose a preset or check individual commands. **Essentials** is a useful starting point. Features such as OCR and highlighting need the extra software listed [below](#extra-software-for-optional-features).
-4. Click **Preview changes**. It lists additions, updates, shortcut conflicts, and missing tools. Install those tools or uncheck the affected commands before continuing.
-5. Click **Install selected** and approve the displayed changes. Setup saves a private backup of your command definitions before applying them.
-6. If asked to restart CopyQ, exit it completely and start it again. This is needed when the undo listener changes.
-7. Click **Verify**, then try the features you chose with disposable text or images.
+3. **Nothing is selected initially.** Check only the commands you want to install or update. The separate **Installed** label tells you what you already have; a checkbox means you want setup to change that command. Each row explains what the command does. For a whole-suite update, use **Select installed commands**. New users can choose **Advanced → Essentials** as a starting point.
+4. Click **Review changes**. Read the **Summary**: it names the additions and updates, tells you how many other commands stay unchanged, and says whether anything needs attention. **Install / update** stays disabled until this selection has a successful review. If tools are missing, install them or uncheck the affected commands and review again. If it says **Already up to date**, there is nothing to install.
+5. Click **Install / update** and approve the reviewed changes. Setup saves a private backup, applies the commands, and **checks the installation automatically**. You do not need to run a separate Verify step.
+6. Read the result: **Installed — automatic checks passed**, **Installed — restart CopyQ**, or **Installation needs attention**. Follow any restart instruction, then try the chosen features with disposable text or images. A restart is requested when the persistent Undo listener is actually added or updated, not merely selected.
+
+The Summary is for normal use. **Technical details** contains diagnostic fields if something fails; you do not need to interpret JSON to decide what to do. **Advanced** contains presets, shortcut editing, saved profiles, Azure configuration, command recovery, and **Check installation again**. A failed post-install check can be retried without reinstalling.
 
 **Unchecked commands stay as they are.** Unchecking a box does not uninstall or disable an existing command. Setup updates selected commands; a conflicting protection command is removed only when that change is disclosed in the confirmation.
 
 ### Updating one command
 
-Click **Uncheck all**, check the command you want, then use **Preview changes → Install selected → Verify**.
+Open setup, check the one command you want, then use **Review changes → Install / update**. The result is checked automatically. **Uncheck all** is still available if you have already selected other commands.
 
-**Read installed selection** is optional. It selects the suite commands you already have and loads their current shortcuts. Use it when updating several commands or preserving customized shortcuts. You can then use **Uncheck all** without losing those loaded shortcut values.
+Setup reads installed commands without selecting them and retains their current shortcuts automatically. You no longer need a separate discovery click to preserve customized shortcuts. **Select installed commands** explicitly selects your installed suite commands for update; it does not install new optional tools. You can uncheck any you do not want to update.
+
+Shortcut changes are optional and live under **Advanced**. Leave the override fields blank to keep current shortcuts; hover over a field to see its current value. Enter a shortcut only when you want to change it, or `-` to remove it. Every new review reads the current installed settings.
 
 For a secret-protection update, select whichever option you use: **Clipboard Router** or **Secret Protection (Standalone)**. Both include the notification and save-to-history features.
 
 ### What setup checks and backs up
 
-Verify checks installed command definitions, runs selected small helper checks, and reports missing dependencies. It does not test real pasting, your mouse or keyboard, OCR accuracy, or your Azure account. Try those features yourself afterward.
+The automatic check compares installed command definitions with the reviewed selection, runs applicable small helper checks, and checks required tools. The Summary will not report success if any of those checks failed or could not run. It does not test real pasting, your mouse or keyboard, OCR accuracy, or your Azure account. Try those features yourself afterward. If checking could not finish after installation, use **Advanced → Check installation again**; do not reinstall just to repeat the check.
 
-Setup installs commands. It does not install CopyQ or other software, change startup settings, or back up clipboard history. Private command backups and receipts are stored under `%LOCALAPPDATA%\CopyQCommandSuite\setup`. Use **Restore commands** with the receipt to undo an installation; it refuses to overwrite later command edits.
+Setup installs commands. It does not install CopyQ or other software, change startup settings, or back up clipboard history. Private command backups and receipts are stored under `%LOCALAPPDATA%\CopyQCommandSuite\setup`. Use **Advanced → Restore commands** with the receipt to undo an installation; it refuses to overwrite later command edits.
 
-**Save profile** remembers your chosen commands and shortcuts for another installation. A profile contains choices, not API keys or clipboard contents. For a complete personal backup including your own and community commands, use CopyQ's **F6 → select all → Save Commands** and keep that file privately.
+**Advanced → Save profile** remembers your chosen commands and shortcuts for another installation. A profile contains choices, not API keys or clipboard contents. For a complete personal backup including your own and community commands, use CopyQ's **F6 → select all → Save Commands** and keep that file privately.
 
 See the [setup and recovery guide](docs/SETUP.md) for profiles, troubleshooting, and recovery details.
 

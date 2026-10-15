@@ -97,7 +97,7 @@ var CopyQSetupPlan = (function () {
         });
         return { commands: output, added: added, updated: updated, unchanged: unchanged,
             replacedProtection: removed, preserved: output.length - chosen.length,
-            needsRestart: !!selected['canonical.undoable-delete-listener'] };
+            needsRestart: added.indexOf('canonical.undoable-delete-listener') >= 0 || updated.indexOf('canonical.undoable-delete-listener') >= 0 };
     }
     return { expandSelection: expandSelection, plan: plan, commandIdentities: commandIdentities };
 }());

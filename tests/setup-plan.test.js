@@ -77,6 +77,13 @@ test('planning preserves native objects and unrelated commands and is idempotent
   assert.deepEqual(setup.plan(plan.commands,[router],serialize,{}).unchanged,[router.internalId]);
   assert.equal(before[1].cmd,'old');
 });
+test('a restart is requested only when the persistent undo listener is actually added or updated', () => {
+  const listener={internalId:'canonical.undoable-delete-listener',name:'Listener',isScript:true,cmd:'listener'};
+  assert.equal(setup.plan([],[listener],serialize,{}).needsRestart,true);
+  assert.equal(setup.plan([{...listener,cmd:'old'}],[listener],serialize,{}).needsRestart,true);
+  assert.equal(setup.plan([listener],[listener],serialize,{}).needsRestart,false);
+  assert.equal(setup.plan([{...router,cmd:'old'}],[router],serialize,{}).needsRestart,false);
+});
 test('only the selected protection alternative replaces the incompatible handler', () => {
   const p = setup.plan([router,{name:'Mine',cmd:'mine'}],[secret],serialize,{});
   assert.deepEqual(p.replacedProtection,[router.internalId]);
