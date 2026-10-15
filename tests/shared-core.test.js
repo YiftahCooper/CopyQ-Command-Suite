@@ -18,9 +18,15 @@ function browserImageCapture(command, options = {}) {
   const blob = 'blob:https://example.test/123e4567-e89b-42d3-a456-426614174000';
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aK1sAAAAASUVORK5CYII=', 'base64');
   const nativePng = 'application/x-qt-windows-mime;value="PNG"';
-  const values = { 'text/plain': blob, 'text/uri-list': blob, 'text/html': '<img src="' + blob + '">' };
+  const values = options.minimalCapture ? {
+    'application/x-copyq-current-tab': '&Clipboard',
+    'application/x-copyq-output-tab': '&Clipboard',
+    'application/x-copyq-owner-window-title': 'Synthetic browser window',
+    'text/plain': blob,
+  } : { 'text/plain': blob, 'text/uri-list': blob, 'text/html': '<img src="' + blob + '">' };
+  if (options.mismatchedCapturedUri) values['text/uri-list'] = 'blob:https://example.test/other';
   if (options.concealedEvent) values['application/x-copyq-secret'] = '1';
-  const currentFormats = options.textClipboard ? ['text/plain', 'text/uri-list'] : [nativePng, 'application/x-qt-image', 'text/html', 'text/uri-list'];
+  const currentFormats = options.textClipboard ? ['text/plain', 'text/uri-list'] : options.imageFormatOnly ? [options.imageFormatOnly, 'text/uri-list'] : [nativePng, 'application/x-qt-image', 'text/html', 'text/uri-list'];
   if (options.concealedClipboard) currentFormats.push('application/x-copyq-secret');
   let currentText = options.stale ? 'replacement clipboard value' : blob;
   let imageReads = 0; let ignored = false;
@@ -62,9 +68,37 @@ test('both protection variants recover a browser PNG omitted from CopyQ automati
   }
 });
 
+test('both protection variants recover the observed text-only WhatsApp capture without inventing URI or HTML data', () => {
+  for (const command of [dispatcher(), buildSecretProtection()]) {
+    for (const convertedOnly of [false, true]) {
+      const result = browserImageCapture(command, { minimalCapture: true, convertedOnly });
+      assert.equal(result.ignored, false);
+      assert.deepEqual(result.values['image/png'], result.png);
+      assert.equal(result.values['text/plain'], result.blob);
+      assert.equal(result.values['text/uri-list'], undefined);
+      assert.equal(result.values['text/html'], undefined);
+      assert.equal(result.values['application/x-copyq-owner-window-title'], 'Synthetic browser window');
+      assert.deepEqual(result.notices, []);
+      assert.deepEqual(result.actions, []);
+    }
+  }
+});
+
+test('browser image recovery accepts non-PNG image MIME types when CopyQ can convert their pixels', () => {
+  for (const command of [dispatcher(), buildSecretProtection()]) {
+    for (const imageFormatOnly of ['image/jpeg', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/svg+xml']) {
+      const result = browserImageCapture(command, { minimalCapture: true, convertedOnly: true, imageFormatOnly });
+      assert.equal(result.ignored, false, imageFormatOnly);
+      assert.deepEqual(result.values['image/png'], result.png);
+      assert.deepEqual(result.notices, []);
+      assert.deepEqual(result.actions, []);
+    }
+  }
+});
+
 test('browser image recovery refuses stale text-only or concealed clipboard data', () => {
   for (const command of [dispatcher(), buildSecretProtection()]) {
-    for (const options of [{ stale: true }, { textClipboard: true }, { concealedEvent: true }, { concealedClipboard: true }, { changedDuringRead: true }]) {
+    for (const options of [{ stale: true }, { textClipboard: true }, { concealedEvent: true }, { concealedClipboard: true }, { changedDuringRead: true }, { mismatchedCapturedUri: true }, { minimalCapture: true, stale: true }, { minimalCapture: true, textClipboard: true }, { minimalCapture: true, concealedEvent: true }, { minimalCapture: true, concealedClipboard: true }]) {
       const result = browserImageCapture(command, options);
       assert.equal(result.values['image/png'], undefined);
       assert.equal(result.ignored, true);

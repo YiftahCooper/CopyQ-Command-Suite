@@ -143,16 +143,19 @@ browser image this can be its `blob:` URI, leaving automatic commands without
 the PNG that is still available on the Windows clipboard.
 
 The shared adapter handles only this narrow case: captured text must be a
-browser blob URI and match the captured URI-list value; the current clipboard
-must have Qt/native PNG image metadata, no advertised plain text, and the same
-text and URI. Hidden, CopyQ-owned and concealed data are excluded. It reads the
+browser blob URI. A captured URI-list value, if present, must match; a text-only
+capture is also supported. The current clipboard must have an `image/*` format
+or Qt/native PNG image metadata, no advertised plain text, and matching text
+and URI. Hidden, CopyQ-owned and concealed data are excluded. It reads the
 native PNG (or CopyQ's PNG conversion), validates its signature, checks the
 current clipboard again, and adds `image/png` to automatic-command data. Later
 image handlers run normally. It does not fetch a URI, write the Windows
 clipboard, create a save-once action, or change frequency state. A matched image
 whose PNG cannot be recovered is excluded with `IMAGE_CAPTURE_FAILED`.
 
-The isolated regression supplies reduced automatic-command data separately
+The isolated regression uses the four observed capture formats (CopyQ current
+tab, output tab, owner-window-title metadata, and plain text), without URI or
+HTML. It supplies this automatic-command data separately
 from fixture-backed current-clipboard reads. It verifies real CopyQ command
 chaining, image-tab placement and byte-exact PNG storage; it does not claim to
 reproduce WhatsApp's native clipboard producer. Live WhatsApp acceptance is a

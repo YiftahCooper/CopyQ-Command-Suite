@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Correct browser-image recovery for the observed text-only automatic capture: do not require URI/HTML formats that CopyQ omitted. Keep current-clipboard image/text/URI and privacy checks, reject a conflicting captured URI, and accept non-PNG image MIME types using CopyQ's PNG conversion. Replace the isolated fixture's assumed companion data with the actual four-format capture and cover both protection variants.
+
 - Recover browser PNGs omitted from CopyQ's automatic capture when the matching image is still on the clipboard. Share the adapter between both protection options, preserve existing image-tab handling, and reject changed or concealed clipboard data. Report `IMAGE_CAPTURE_FAILED` for unreadable images rather than a false secret warning with an expired save action. Add reduced-capture regressions and isolated byte-exact image-storage coverage.
 
 - Preserve image copies with opaque companion labels instead of guessing those labels are passwords. Recognize Qt and native Windows PNG/bitmap formats used by WhatsApp in both protection variants; retain explicit-credential and password-manager protection. Add classifier, notification, and isolated image-storage regressions.
