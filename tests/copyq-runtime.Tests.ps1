@@ -411,6 +411,43 @@ testRealAction('copyq:\n'+prelude+worker+'\n'+ending);
         }
     }
 
+    It 'recovers a matching browser PNG missing from the automatic capture and stores it through the image handler' {
+        $root = Split-Path -Parent $PSScriptRoot
+        $alternative = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([IO.File]::ReadAllText((Join-Path $root 'commands\alternatives\secret-protection.ini'))))
+        $baseline = Invoke-IsolatedEval 'exportCommands(commands())'
+        $baselineEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($baseline))
+        $png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aK1sAAAAASUVORK5CYII='
+        # The automatic capture and current clipboard are different API surfaces.
+        # Stub only current-clipboard reads inside the installed test command;
+        # command chaining, setData(), image routing and history storage are real.
+        $prelude = @"
+var testBlob='blob:https://web.whatsapp.com/123e4567-e89b-42d3-a456-426614174000';
+var testPng=fromBase64('$png');
+var clipboard=function(format){
+  var nativePng='application/x-qt-windows-mime;value='+String.fromCharCode(34)+'PNG'+String.fromCharCode(34);
+  if(format==='?')return 'application/x-qt-image\n'+nativePng+'\ntext/html\ntext/uri-list\n';
+  if(format===mimeText||format===mimeUriList)return testBlob;
+  if(format===nativePng||format==='image/png')return testPng;
+  return '';
+};
+"@
+        $preludeEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($prelude))
+        try {
+            foreach ($variant in @('router', 'standalone')) {
+                Invoke-IsolatedEval "var cs=importCommands(str(fromBase64('$baselineEncoded')));if('$variant'==='standalone'){cs=cs.filter(function(c){return c.internalId!=='canonical.dispatcher';});cs.unshift(importCommands(str(fromBase64('$alternative')))[0]);}var protection=cs.filter(function(c){return c.internalId===('$variant'==='router'?'canonical.dispatcher':'canonical.secret-protection');})[0];protection.cmd=protection.cmd.replace(/^copyq:\s*/,'copyq:\n'+str(fromBase64('$preludeEncoded'))+'\n');cs.push({name:'Test Browser Image Handler',automatic:true,input:'image/png',tab:'Browser Image Test'});setCommands(cs);'READY'" | Should Be 'READY'
+                $result = Invoke-IsolatedEval "var before=settings('frequent_usage_counts_v3');var notice=settings('test_notice_code');var blob='blob:https://web.whatsapp.com/123e4567-e89b-42d3-a456-426614174000';setData(mimeText,blob);setData(mimeUriList,blob);setData(mimeHtml,'<img src='+blob+'>');setData(mimeOutputTab,'Browser Image Fallback');var initiallyMissing=dataFormats().indexOf('image/png')<0;var accepted=runAutomaticCommands();if(accepted)saveData();tab('Browser Image Test');JSON.stringify({initiallyMissing:initiallyMissing,accepted:accepted,pngUnchanged:str(sha256sum(read('image/png',0)))===str(sha256sum(fromBase64('$png'))),text:str(read(mimeText,0)),sameFrequency:before===settings('frequent_usage_counts_v3'),noNotice:notice===settings('test_notice_code')})" | ConvertFrom-Json
+                $result.initiallyMissing | Should Be $true
+                $result.accepted | Should Be $true
+                $result.pngUnchanged | Should Be $true
+                $result.text | Should Be 'blob:https://web.whatsapp.com/123e4567-e89b-42d3-a456-426614174000'
+                $result.sameFrequency | Should Be $true
+                $result.noNotice | Should Be $true
+            }
+        } finally {
+            Invoke-IsolatedEval "setCommands(importCommands(str(fromBase64('$baselineEncoded'))));'RESTORED'" | Out-Null
+        }
+    }
+
     It 'suppresses synthetic secrets before a later automatic copy-to-tab action can store them' {
         Invoke-IsolatedEval "var cs=commands();cs.push({name:'Test Later Copy',automatic:true,tab:'Must Stay Empty',input:''});setCommands(cs);'READY'" | Should Be 'READY'
         try {

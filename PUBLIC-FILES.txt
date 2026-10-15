@@ -85,6 +85,7 @@ src/runtime/show-frequent.js
 src/runtime/web-search.js
 src/runtime/command-source.js
 src/runtime/secret-protection-fragment.js
+src/runtime/clipboard-image.js
 src/runtime/secret-protection.js
 src/runtime/secret-save-once.js
 src/runtime/secret-native-notification.js

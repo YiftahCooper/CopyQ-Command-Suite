@@ -10,9 +10,82 @@ const root = path.resolve(__dirname, "..");
 const { bundleCore, moduleNames } = require("../src/bundle-core");
 const sharedSource = bundleCore(moduleNames);
 const Core = vm.runInNewContext(sharedSource + "\nCopyQCore;", {});
-const { buildCandidate } = require("../src/commands");
+const { buildCandidate, buildSecretProtection } = require("../src/commands");
 
 function dispatcher() { return buildCandidate().commands.find((entry) => entry.internalId === "canonical.dispatcher"); }
+
+function browserImageCapture(command, options = {}) {
+  const blob = 'blob:https://example.test/123e4567-e89b-42d3-a456-426614174000';
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aK1sAAAAASUVORK5CYII=', 'base64');
+  const nativePng = 'application/x-qt-windows-mime;value="PNG"';
+  const values = { 'text/plain': blob, 'text/uri-list': blob, 'text/html': '<img src="' + blob + '">' };
+  if (options.concealedEvent) values['application/x-copyq-secret'] = '1';
+  const currentFormats = options.textClipboard ? ['text/plain', 'text/uri-list'] : [nativePng, 'application/x-qt-image', 'text/html', 'text/uri-list'];
+  if (options.concealedClipboard) currentFormats.push('application/x-copyq-secret');
+  let currentText = options.stale ? 'replacement clipboard value' : blob;
+  let imageReads = 0; let ignored = false;
+  const notices = []; const actions = []; const stop = {}; const settings = {};
+  const context = {
+    commands: () => [command], dataFormats: () => Object.keys(values), data: (format) => values[format] || '',
+    str: String, mimeText: 'text/plain', mimeHtml: 'text/html', mimeUriList: 'text/uri-list', mimeOwner: 'owner', mimeHidden: 'hidden', mimeOutputTab: 'output',
+    clipboard: (format) => {
+      if (format === '?') return currentFormats.join('\n') + '\n';
+      if (format === 'text/plain' || format === 'text/uri-list') return currentText;
+      imageReads += 1;
+      if (options.changedDuringRead) currentText = 'replacement clipboard value';
+      return options.badPng || (options.convertedOnly && format === nativePng) ? Buffer.from('not a PNG') : png;
+    },
+    toBase64: (bytes) => Buffer.from(bytes).toString('base64'),
+    setData: (format, value) => { if (options.writeFails) return false; values[format] = value; return true; },
+    removeData: () => assert.fail('image capture must preserve companion formats'),
+    notification: (...args) => notices.push(args), ignore: () => { ignored = true; }, abort: () => { throw stop; },
+    action: (code) => actions.push(code), sha256sum: () => 'a'.repeat(64),
+    settings: (key, value) => { assert.notEqual(key, 'frequent_usage_counts_v3'); if (value !== undefined) settings[key] = value; return settings[key] || ''; },
+    copy: () => assert.fail('history capture must not replace the Windows clipboard'),
+  };
+  try { vm.runInNewContext(command.cmd.replace(/^copyq:\s*/, ''), context); } catch (e) { if (e !== stop) throw e; }
+  return { values, png, blob, imageReads, ignored, notices, actions };
+}
+
+test('both protection variants recover a browser PNG omitted from CopyQ automatic-command data', () => {
+  for (const command of [dispatcher(), buildSecretProtection()]) {
+    for (const options of [{}, { convertedOnly: true }]) {
+      const result = browserImageCapture(command, options);
+      assert.equal(result.ignored, false);
+      assert.deepEqual(result.values['image/png'], result.png);
+      assert.equal(result.values['text/plain'], result.blob);
+      assert.equal(result.values['text/uri-list'], result.blob);
+      assert.equal(result.values['text/html'], '<img src="' + result.blob + '">');
+      assert.deepEqual(result.notices, []);
+      assert.deepEqual(result.actions, []);
+    }
+  }
+});
+
+test('browser image recovery refuses stale text-only or concealed clipboard data', () => {
+  for (const command of [dispatcher(), buildSecretProtection()]) {
+    for (const options of [{ stale: true }, { textClipboard: true }, { concealedEvent: true }, { concealedClipboard: true }, { changedDuringRead: true }]) {
+      const result = browserImageCapture(command, options);
+      assert.equal(result.values['image/png'], undefined);
+      assert.equal(result.ignored, true);
+      if (!options.changedDuringRead) assert.equal(result.imageReads, 0);
+    }
+  }
+});
+
+test('failed browser image recovery reports capture failure rather than a false secret warning', () => {
+  for (const command of [dispatcher(), buildSecretProtection()]) {
+    for (const options of [{ badPng: true }, { writeFails: true }, { changedDuringRead: true }]) {
+      const result = browserImageCapture(command, options);
+      assert.equal(result.ignored, true);
+      assert.equal(result.values['image/png'], undefined);
+      assert.equal(result.notices.some((notice) => notice.includes('IMAGE_CAPTURE_FAILED')), true);
+      assert.equal(JSON.stringify(result.notices).includes('SECRET_IGNORED'), false);
+      assert.equal(JSON.stringify(result.notices).includes(result.blob), false);
+      assert.deepEqual(result.actions, []);
+    }
+  }
+});
 
 test("dispatcher suppresses a secret even if the notification backend throws", () => {
   let ignored = false;

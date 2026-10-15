@@ -10,6 +10,7 @@ every feature in the suite. No extra runtime module installation is required.
 |---|---|
 | Secret detection, redaction and safety decisions | `src/core/secrets.js` |
 | Shared protection notifications and filtering | `src/runtime/secret-protection-fragment.js` |
+| Browser-image capture recovery shared by both protection options | `src/runtime/clipboard-image.js` |
 | Confirmed one-time save notification action | `src/runtime/secret-save-once.js` |
 | Native Windows notification transport | `src/runtime/secret-native-notification.js` |
 | URL recognition and credential URL rules | `src/core/urls.js` |
@@ -131,6 +132,31 @@ cannot undo earlier commands' writes or network requests.
 The standalone alternative is **not** bundled into `all.ini`. There are still 18
 commands in the integrated suite, with one additional optional alternative. The
 Moonlander bundle and its F13/F19/F22 ownership remain unchanged.
+
+## Browser-image capture recovery
+
+CopyQ 16's [clipboard capture implementation](https://github.com/hluk/CopyQ/blob/v16.0.0/src/common/common.cpp)
+can skip binary image formats when text is available. Its
+[clipboard guard](https://github.com/hluk/CopyQ/blob/v16.0.0/src/common/clipboarddataguard.cpp)
+can synthesize that text even without an advertised `text/plain` format. For a
+browser image this can be its `blob:` URI, leaving automatic commands without
+the PNG that is still available on the Windows clipboard.
+
+The shared adapter handles only this narrow case: captured text must be a
+browser blob URI and match the captured URI-list value; the current clipboard
+must have Qt/native PNG image metadata, no advertised plain text, and the same
+text and URI. Hidden, CopyQ-owned and concealed data are excluded. It reads the
+native PNG (or CopyQ's PNG conversion), validates its signature, checks the
+current clipboard again, and adds `image/png` to automatic-command data. Later
+image handlers run normally. It does not fetch a URI, write the Windows
+clipboard, create a save-once action, or change frequency state. A matched image
+whose PNG cannot be recovered is excluded with `IMAGE_CAPTURE_FAILED`.
+
+The isolated regression supplies reduced automatic-command data separately
+from fixture-backed current-clipboard reads. It verifies real CopyQ command
+chaining, image-tab placement and byte-exact PNG storage; it does not claim to
+reproduce WhatsApp's native clipboard producer. Live WhatsApp acceptance is a
+separate check.
 
 ## Verification and recovery
 

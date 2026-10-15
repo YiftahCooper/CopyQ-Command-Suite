@@ -38,6 +38,8 @@ Standalone guessing is limited to 10–150 characters with no whitespace and at 
 
 Image-bearing copies bypass only standalone password guessing for their companion text. This covers image MIME types, Qt image data, and native Windows PNG/bitmap formats such as those supplied by WhatsApp. Image bytes and other formats pass to the existing image handler, with no frequency counting, secret warning, or text-only save action for an opaque label. Explicit credentials, embedded credential redaction, and password-manager concealment still take precedence; a plain-text copy of the same label remains subject to normal secret checks. This shared rule applies to both protection variants and does not scan text inside image pixels.
 
+For browser images whose automatic capture contains only the temporary `blob:` address and HTML/URI data, both variants recover a readable PNG from the current clipboard only when the captured and current addresses match. The system clipboard is not changed, and no URL is fetched. The existing image handler then receives an actual `image/png` format. Recovery refuses changed, concealed, internal, or ordinary text clipboards. If a matching image is unreadable, it is excluded with `IMAGE_CAPTURE_FAILED`, not a misleading secret warning or unusable save action.
+
 ### Secret Protection (Standalone) — optional alternative
 
 **Secret filtering only, for users who do not want Clipboard Router.** It uses
