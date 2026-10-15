@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve image copies with opaque companion labels instead of guessing those labels are passwords. Recognize Qt and native Windows PNG/bitmap formats used by WhatsApp in both protection variants; retain explicit-credential and password-manager protection. Add classifier, notification, and isolated image-storage regressions.
+
 - Use CopyQ's embedded logo for native clickable secret notifications instead of SnoreToast's default image. Share the icon handling across both protection options, clean up the temporary image after delivery, and keep notifications functional if the image is unavailable.
 
 - Preserve Clipboard Router's primary destination when a notification-confirmed save adds an unredacted original. Artifacts, code, large text and URLs stay in their routed tabs; standalone protection and ignored standalone values continue to use main history. No reclassification or frequency counting is performed by the save.

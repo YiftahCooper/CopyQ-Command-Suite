@@ -94,6 +94,19 @@ test("both protection variants asynchronously offer ignored and redacted saves w
   }
 });
 
+test("both protection variants pass image labels to later image handlers without notices or text saves", () => {
+  for (const command of [buildCandidate().commands[0], buildSecretProtection()]) {
+    for (const formats of [["image/png"], ["application/x-qt-image"], ["PNG", "Format17", "HTML Format", "UniformResourceLocatorW", "Chromium internal source RFH token", "Chromium internal source URL", "Bitmap", "DeviceIndependentBitmap"], ['application/x-qt-windows-mime;value="PNG"']]) {
+      const result = dispatch(command, uuid, formats);
+      assert.equal(result.ignored, false);
+      assert.deepEqual(result.notices, []);
+      assert.deepEqual(result.actions, []);
+      assert.equal(result.values["text/plain"], uuid);
+      assert.deepEqual(result.state, {});
+    }
+  }
+});
+
 test('redacted mixed text can be explicitly saved but concealed and internal data cannot', () => {
   const action = { ...actionFrom(buildSecretProtection()), input: digest(mixed) };
   const result = runAction(action, { text: mixed });

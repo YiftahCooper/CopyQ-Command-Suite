@@ -389,6 +389,28 @@ testRealAction('copyq:\n'+prelude+worker+'\n'+ending);
         }
     }
 
+    It 'preserves real PNG image bytes and opaque companion labels through both protection variants' {
+        $root = Split-Path -Parent $PSScriptRoot
+        $alternative = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([IO.File]::ReadAllText((Join-Path $root 'commands\alternatives\secret-protection.ini'))))
+        $baseline = Invoke-IsolatedEval 'exportCommands(commands())'
+        $baselineEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($baseline))
+        $png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aK1sAAAAASUVORK5CYII='
+        try {
+            foreach ($variant in @('router', 'standalone')) {
+                Invoke-IsolatedEval "var cs=importCommands(str(fromBase64('$baselineEncoded')));if('$variant'==='standalone'){cs=cs.filter(function(c){return c.internalId!=='canonical.dispatcher';});cs.unshift(importCommands(str(fromBase64('$alternative')))[0]);}cs.push({name:'Test Image Handler',automatic:true,input:'image/png',tab:'WhatsApp Image Test'});setCommands(cs);'READY'" | Should Be 'READY'
+                $result = Invoke-IsolatedEval "var before=settings('frequent_usage_counts_v3');var notice=settings('test_notice_code');setData(mimeText,'123e4567-e89b-42d3-a456-426614174000');setData('image/png',fromBase64('$png'));setData(mimeHtml,'<img src=blob:https://example.test/synthetic>');setData('application/x-qt-windows-mime;value='+String.fromCharCode(34)+'Chromium internal source RFH token'+String.fromCharCode(34),'opaque metadata');setData(mimeOutputTab,'Image Fallback Test');var accepted=runAutomaticCommands();if(accepted)saveData();tab('WhatsApp Image Test');JSON.stringify({accepted:accepted,pngUnchanged:str(sha256sum(read('image/png',0)))===str(sha256sum(fromBase64('$png'))),text:str(read(mimeText,0)),sameFrequency:before===settings('frequent_usage_counts_v3'),noNotice:notice===settings('test_notice_code')})" | ConvertFrom-Json
+                $result.accepted | Should Be $true
+                $result.pngUnchanged | Should Be $true
+                $result.text | Should Be '123e4567-e89b-42d3-a456-426614174000'
+                $result.sameFrequency | Should Be $true
+                $result.noNotice | Should Be $true
+                Invoke-IsolatedEval "setData('image/png',fromBase64('$png'));setData('Clipboard Viewer Ignore','1');String(runAutomaticCommands())" | Should Be 'false'
+            }
+        } finally {
+            Invoke-IsolatedEval "setCommands(importCommands(str(fromBase64('$baselineEncoded'))));'RESTORED'" | Out-Null
+        }
+    }
+
     It 'suppresses synthetic secrets before a later automatic copy-to-tab action can store them' {
         Invoke-IsolatedEval "var cs=commands();cs.push({name:'Test Later Copy',automatic:true,tab:'Must Stay Empty',input:''});setCommands(cs);'READY'" | Should Be 'READY'
         try {

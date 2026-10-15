@@ -117,6 +117,8 @@ OCR, rendering, translation, and undo are separate commands you can add as neede
 
 These categories use recognizable patterns, so classification can occasionally be imperfect. For example, a JSON object needs at least two properties to qualify as an artifact. Markdown headings and quotations alone do not make a document an artifact. URLs are saved without visiting the address. Images retain their existing handling; this suite does not include a separate image-tab organizer.
 
+Image copies, including WhatsApp's PNG/bitmap clipboard formats, keep their image data even if an accompanying label looks like a random password. Password guessing applies to text copies. Explicit credentials and password-manager instructions to hide clipboard data are still checked.
+
 If you have an older **Copy URL (web address) to other tab** command that creates `&web`, disable it when using the router: it duplicates URL storage. The community **Tab for URLs with Title and Icon** command can run afterward if you want it, but it visits copied addresses. See the [catalogue](docs/commands/COMMANDS.md) for its filter and ordering.
 
 #### How Frequent works

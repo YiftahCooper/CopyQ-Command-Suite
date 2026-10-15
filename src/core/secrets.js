@@ -16,6 +16,12 @@ function decode(part) {
 }
 function validJwt(text) { var parts = text.split('.'); var head; var body; try { head = parts.length === 3 ? JSON.parse(decode(parts[0])) : null; body = parts.length === 3 ? JSON.parse(decode(parts[1])) : null; } catch (e) { return false; } return !!(head && body && typeof head.alg === 'string' && /^[A-Za-z0-9_-]+$/.test(parts[2] || '')); }
 function secretFormat(formats) { return hasFormat(formats, /(?:application\/x-copyq-secret|org\.nspasteboard\.concealedtype|clipboard viewer ignore|x-kde-passwordmanagerhint|nspasteboard concealed|mimesecret|com\.agilebits\.onepassword|1password|bitwarden|keepass|lastpass|password-manager)/i); }
+function imageFormat(formats) {
+  return hasFormat(formats, /^image\//i)
+    || hasFormat(formats, /^application\/x-qt-image$/i)
+    || hasFormat(formats, /^(?:PNG|Bitmap|DeviceIndependentBitmap|Format17)$/i)
+    || hasFormat(formats, /^application\/x-qt-windows-mime;\s*value="(?:PNG|Bitmap|DeviceIndependentBitmap|Format17)"$/i);
+}
 function structuredNonSecret(text) {
   return isStandaloneUrl(text)
     || /^(?:[A-Za-z]:[\\/]|\\\\|\/)[^\r\n]+$/.test(text)
@@ -62,7 +68,7 @@ function isHighConfidenceSecret(value, formats) {
 function canSaveIgnoredOnce(input) {
   var text = trim(input && input.text);
   var formats = input && input.formats || [];
-  if (secretFormat(formats) || hasFormat(formats, /^image\//i)
+  if (secretFormat(formats) || imageFormat(formats)
       || (input && input.mimeOwner && formats.indexOf(input.mimeOwner) >= 0)
       || (input && input.mimeHidden && formats.indexOf(input.mimeHidden) >= 0)) return false;
   return heuristicSecret(text) && !explicitSecret(text) && !redactSecrets(text).redacted;
@@ -71,7 +77,7 @@ function canSaveIgnoredOnce(input) {
 // remains on the clipboard. Concealment/internal/image metadata is never bypassed.
 function canSaveProtectedOnce(input) {
   var formats = input && input.formats || [];
-  if (secretFormat(formats) || hasFormat(formats, /^image\//i)
+  if (secretFormat(formats) || imageFormat(formats)
       || (input && input.mimeOwner && formats.indexOf(input.mimeOwner) >= 0)
       || (input && input.mimeHidden && formats.indexOf(input.mimeHidden) >= 0)) return false;
   return canSaveIgnoredOnce(input) || inspectClipboard(input).action === 'redacted';
@@ -108,11 +114,15 @@ function inspectClipboard(input) {
   var text = String(input && input.text != null ? input.text : '');
   var formats = input && input.formats || [];
   if (secretFormat(formats)) return { action: 'ignored', frequencyEligible: false };
+  var image = imageFormat(formats);
+  // Images can carry opaque labels or Chromium metadata that look like passwords.
+  // Guess only for text copies; explicit credentials and concealment still win.
+  var wholeSecret = image ? explicitSecret(trim(text)) : isHighConfidenceSecret(text);
   var redaction = redactSecrets(text);
-  var standalone = trim(redaction.text).replace(/[\u200b\u200e\u200f\u2066-\u2069]/g, '') === '[REDACTED]' || (!/[\r\n]/.test(trim(text)) && /^(?:authorization\s*:|(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=)/i.test(trim(text)) && isHighConfidenceSecret(text));
-  if (standalone || (!redaction.redacted && isHighConfidenceSecret(text))) return { action: 'ignored', frequencyEligible: false };
+  var standalone = trim(redaction.text).replace(/[\u200b\u200e\u200f\u2066-\u2069]/g, '') === '[REDACTED]' || (!/[\r\n]/.test(trim(text)) && /^(?:authorization\s*:|(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=)/i.test(trim(text)) && wholeSecret);
+  if (standalone || (!redaction.redacted && wholeSecret)) return { action: 'ignored', frequencyEligible: false };
   if (redaction.redacted) return { action: 'redacted', frequencyEligible: false, redactedText: redaction.text };
-  if (hasFormat(formats, /^image\//i) || (input && input.mimeOwner && formats.indexOf(input.mimeOwner) >= 0) || (input && input.mimeHidden && formats.indexOf(input.mimeHidden) >= 0)) return { action: 'passthrough', frequencyEligible: false };
+  if (image || (input && input.mimeOwner && formats.indexOf(input.mimeOwner) >= 0) || (input && input.mimeHidden && formats.indexOf(input.mimeHidden) >= 0)) return { action: 'passthrough', frequencyEligible: false };
   return { action: 'allowed', frequencyEligible: trim(text) !== '' };
 }
 

@@ -36,6 +36,8 @@ See [one-time save, expiry and privacy details](../../README.md#save-an-ignored-
 
 Standalone guessing is limited to 10–150 characters with no whitespace and at least two of lowercase letters, uppercase letters and digits, with existing URL/path/version exceptions. A single uppercase initial followed entirely by lowercase letters (for example, `Collegiate`) does not trigger that guess. This is a shape exemption, not proof that the text is a word or is safe. Bare 32–128-character hexadecimal values and bare UUID-shaped values remain excluded, including harmless identifiers with that shape. Unlabeled UUIDs in documents and ordinary URLs remain intact. JSON objects and arrays bypass only the generic whole-item guess, not embedded credential detection or password-manager concealment metadata. Recognized credentials longer than 150 characters remain protected. These rules process new clipboard events, not historical entries.
 
+Image-bearing copies bypass only standalone password guessing for their companion text. This covers image MIME types, Qt image data, and native Windows PNG/bitmap formats such as those supplied by WhatsApp. Image bytes and other formats pass to the existing image handler, with no frequency counting, secret warning, or text-only save action for an opaque label. Explicit credentials, embedded credential redaction, and password-manager concealment still take precedence; a plain-text copy of the same label remains subject to normal secret checks. This shared rule applies to both protection variants and does not scan text inside image pixels.
+
 ### Secret Protection (Standalone) — optional alternative
 
 **Secret filtering only, for users who do not want Clipboard Router.** It uses

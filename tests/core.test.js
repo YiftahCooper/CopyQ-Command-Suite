@@ -169,6 +169,32 @@ test("secret checks precede image and CopyQ metadata passthrough", () => {
   assert.equal(routeContent({ text: "", formats: ["image/png", "Clipboard Viewer Ignore"] }).action, "ignored");
 });
 
+test("image copies retain opaque labels without treating them as standalone passwords", () => {
+  const windowsFormats = ["PNG", "Format17", "HTML Format", "UniformResourceLocatorW", "Chromium internal source RFH token", "Chromium internal source URL", "Bitmap", "DeviceIndependentBitmap"];
+  const imageFormats = [windowsFormats, ["image/png"], ["application/x-qt-image"], ['application/x-qt-windows-mime;value="PNG"'], ['application/x-qt-windows-mime;value="DeviceIndependentBitmap"']];
+  for (const text of ["123e4567-e89b-42d3-a456-426614174000", "a1b2".repeat(16), "WhatsAppImage123.jpeg"]) {
+    assert.equal(core.route({ text }).action, "ignored", "text-only values still use password guessing");
+    for (const formats of imageFormats) {
+      assert.deepEqual(core.route({ text, formats }), { action: "passthrough", frequencyEligible: false });
+      assert.equal(core.canSaveProtectedOnce({ text, formats }), false, "images must not offer a text-only save");
+    }
+  }
+});
+
+test("image metadata does not override explicit credentials or password-manager concealment", () => {
+  for (const formats of [["image/png"], ["PNG", "Bitmap"], ['application/x-qt-windows-mime;value="PNG"']]) {
+    assert.equal(core.route({ text: "ghp_" + "a".repeat(36), formats }).action, "ignored");
+    assert.equal(core.route({ text: "opaque image label", formats: [...formats, "Clipboard Viewer Ignore"] }).action, "ignored");
+    assert.equal(core.route({ text: 'Note: api_key="synthetic credential"', formats }).redactedText, 'Note: api_key="[REDACTED]"');
+  }
+});
+
+test("HTML URL and Chromium source formats alone do not bypass text secret checks", () => {
+  for (const format of ["HTML Format", "UniformResourceLocatorW", "Chromium internal source RFH token", "Chromium internal source URL", 'application/x-qt-windows-mime;value="HTML Format"']) {
+    assert.equal(core.route({ text: "123e4567-e89b-42d3-a456-426614174000", formats: [format] }).action, "ignored");
+  }
+});
+
 test("invisible formatting does not disguise a standalone key", () => {
   assert.equal(isHighConfidenceSecret("\u200bghp_abcdefghijklmnopqrstuvwxyz1234567890\u200b"), true);
   assert.equal(isHighConfidenceSecret("\u2066OpaqueSecret123456\u2069"), true);
