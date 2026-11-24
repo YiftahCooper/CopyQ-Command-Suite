@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Route bare nameservers and other hostnames with common domain endings to `&URLs`, including a list copied together. Keep the original text and apply the existing secret checks first.
+
 - Simplify setup into choose, review, and install-with-automatic-checking. Start with nothing selected; distinguish installed status from requested changes, describe each command, retain installed shortcuts automatically, and keep presets/maintenance controls under Advanced. Show human-readable results and next steps, gate installation on a current successful review, keep diagnostics secondary, and allow checks to be retried without reinstalling. Request a restart only when the Undo listener is actually added or updated.
 
 - Correct browser-image recovery for the observed text-only automatic capture: do not require URI/HTML formats that CopyQ omitted. Keep current-clipboard image/text/URI and privacy checks, reject a conflicting captured URI, and accept non-PNG image MIME types using CopyQ's PNG conversion. Replace the isolated fixture's assumed companion data with the actual four-format capture and cover both protection variants.

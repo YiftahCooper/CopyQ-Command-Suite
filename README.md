@@ -113,7 +113,7 @@ OCR, rendering, translation, and undo are separate commands you can add as neede
 | Copied content | Saved in |
 |---|---|
 | Text of 5,000 characters or more | `BIG` |
-| A standalone web, FTP, or file URL below that size limit | `&URLs` |
+| A standalone web, FTP, or file URL, or bare hostnames with common endings such as `.com` and `.org` | `&URLs` |
 | Structured JSON, logs, stack traces, command transcripts, multiline operational commands, diffs, or configuration blocks | `Artifacts` |
 | Recognized source code | `Code` |
 | Ordinary text, Markdown prose, a single path, or a short command such as `git status` | Your normal clipboard tab |

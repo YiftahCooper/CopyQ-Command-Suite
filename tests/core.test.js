@@ -215,6 +215,22 @@ test("URL routing covers standalone HTTP FTP and file links without requiring a 
   assert.equal(routeContent({ text: "https://example.test/\nA message for a friend" }).action, "default");
 });
 
+test("routes bare nameservers separately or as one copied list", () => {
+  for (const text of [
+    "amalia.ns.cloudflare.com",
+    "koa.ns.cloudflare.com",
+    "amalia.ns.cloudflare.com\r\nkoa.ns.cloudflare.com",
+    "  example.org.  ",
+  ]) {
+    assert.deepEqual(routeContent({ text }), { action: "url", frequencyEligible: true }, text);
+  }
+  for (const text of ["index.js", "notes.txt", "1.2.3", "https://example.com/\nNotes", "amalia.ns.cloudflare.com\nUse this nameserver"]) {
+    assert.equal(routeContent({ text }).action, "default", text);
+  }
+  assert.equal(routeContent({ text: "amalia.ns.cloudflare.com", formats: ["application/x-copyq-secret"] }).action, "ignored");
+  assert.equal(routeContent({ text: "Opaque.Password123" }).action, "ignored");
+});
+
 test("routes code without classifying prose as code", () => {
   assert.equal(isCode("const answer = items.map(function (item) { return item.id; });"), true);
   assert.equal(isCode("The team will return the report after the meeting."), false);

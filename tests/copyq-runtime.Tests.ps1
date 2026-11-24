@@ -242,6 +242,17 @@ Describe 'Isolated CopyQ 16 runtime acceptance' {
         Invoke-IsolatedEval "String(tab().indexOf('URL Fallback Test'))" | Should Be '-1'
     }
 
+    It 'stores copied nameservers in URLs without changing their text or duplicating them in main history' {
+        foreach ($text in @('amalia.ns.cloudflare.com', 'koa.ns.cloudflare.com', "amalia.ns.cloudflare.com`r`nkoa.ns.cloudflare.com")) {
+            $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($text))
+            $result = Invoke-IsolatedEval "var raw=fromBase64('$encoded');setData(mimeText,raw);setData(mimeOutputTab,'Nameserver Fallback');var accepted=runAutomaticCommands();if(accepted)saveData();var destination=str(data(mimeOutputTab));tab('&URLs');JSON.stringify({accepted:accepted,destination:destination,exact:str(read(mimeText,0))===str(raw),fallbackExists:tab().indexOf('Nameserver Fallback')>=0})" | ConvertFrom-Json
+            $result.accepted | Should Be $true
+            $result.destination | Should Be '&URLs'
+            $result.exact | Should Be $true
+            $result.fallbackExists | Should Be $false
+        }
+    }
+
     It 'stores compact JSON intact while preserving standalone and embedded secret protection' {
         $cases = @(
             @{Text='Collegiate'; Accepted=$true; Stored='Collegiate'; Destination='Password Boundary Test'},
